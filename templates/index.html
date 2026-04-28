@@ -132,6 +132,14 @@
 
         <div class="grid grid--kpi section" id="kpi-grid"></div>
 
+        <div class="card section pop-card" id="pop-card" style="display:none">
+          <div class="card__head">
+            <h2 class="card__title" data-i18n="pop.title"></h2>
+            <span class="card__hint" id="pop-meta"></span>
+          </div>
+          <div class="pop-grid" id="pop-grid"></div>
+        </div>
+
         <div class="card section insights-card">
           <div class="card__head">
             <h2 class="card__title">
@@ -486,6 +494,12 @@ const I18N = {
     'examples.q2':'هل هناك تصاعد في شكاوى السداد؟',
     'examples.q3':'ما الفئات الأقل شيوعاً ولماذا قد نتجاهلها؟',
     'na':'—','of':'من','records':'سجل','request':'طلب',
+    'pop.title':'مقارنة آخر أسبوعين بالأسبوعين السابقين',
+    'pop.total':'إجمالي الطلبات','pop.complaints':'الشكاوى','pop.high':'الخطورة العالية',
+    'pop.empty':'لا تتوفر بيانات كافية للمقارنة',
+    'insight.kind.anomaly':'تنبيه','insight.kind.risk':'خطر','insight.kind.momentum':'اتجاه',
+    'insight.kind.complaints':'شكاوى','insight.kind.opportunity':'فرصة','insight.kind.recurring':'تكرار',
+    'insight.examples':'أمثلة من البيانات','insight.see_records':'عرض السجلات',
   },
   en: {
     'app.title':'Beneficiary Engagement Analytics',
@@ -557,6 +571,12 @@ const I18N = {
     'examples.q2':'Is there an upward trend in payment complaints?',
     'examples.q3':'Which categories are least common and why might we deprioritize them?',
     'na':'—','of':'of','records':'records','request':'requests',
+    'pop.title':'Last two weeks vs the prior two',
+    'pop.total':'Total requests','pop.complaints':'Complaints','pop.high':'High severity',
+    'pop.empty':'Not enough data to compare',
+    'insight.kind.anomaly':'Alert','insight.kind.risk':'Risk','insight.kind.momentum':'Trend',
+    'insight.kind.complaints':'Complaints','insight.kind.opportunity':'Opportunity','insight.kind.recurring':'Recurring',
+    'insight.examples':'Examples from the data','insight.see_records':'Open records',
   },
 };
 
@@ -1034,6 +1054,7 @@ async function refreshAll() {
   renderSeverity(sev);
   renderInsights(ins);
   renderForecast(fc);
+  loadPeriodComparison();
 
   const [topics, weeklyByCat, alerts, sevWeekly, momentum, matrix, recur] = await Promise.all([
     api('/api/topics?top_n=10'), api('/api/weekly_by_cat'), api('/api/alerts'),
@@ -1079,16 +1100,81 @@ function renderKpis(k) {
 function renderInsights(d) {
   const list = d.insights || [];
   if (!list.length) { qs('#insights-list').innerHTML = `<div class="empty"><p>${t('drawer.empty')}</p></div>`; return; }
-  qs('#insights-list').innerHTML = list.map((it, i) => `
-    <div class="insight">
-      <div class="insight__num">${fmtInt(i+1)}</div>
+  qs('#insights-list').innerHTML = list.map((it, i) => {
+    const kind = it.kind || 'risk';
+    const kindLabel = t('insight.kind.' + kind) || kind;
+    const examplesHtml = (it.examples && it.examples.length) ? `
+        <div class="insight__examples">
+          <div class="insight__examples-label">${t('insight.examples')}</div>
+          <div class="insight__examples-list">
+            ${it.examples.map(e => `<div class="insight__ex">
+                <span class="insight__ex-id">#${nm(e.id)}</span>
+                <span class="insight__ex-body">${escapeHtml(e.body || '')}</span>
+              </div>`).join('')}
+          </div>
+        </div>` : '';
+    const drillBtn = (it.examples && it.examples.length) ? `
+        <button class="link-btn insight__cta" data-ids="${(it.examples||[]).map(e=>e.id).join(',')}">
+          ${t('insight.see_records')} →
+        </button>` : '';
+    return `
+    <div class="insight insight--${kind}">
+      <div class="insight__num insight__num--${kind}">${fmtInt(i+1)}</div>
       <div class="insight__body">
-        <div class="insight__title">${escapeHtml(it.title)}</div>
+        <div class="insight__head">
+          <span class="insight__kind insight__kind--${kind}">${kindLabel}</span>
+          <div class="insight__title">${escapeHtml(it.title)}</div>
+        </div>
         <div class="insight__row"><span class="insight__tag">${t('insight.tag.evidence')}</span> ${escapeHtml(it.evidence||'')}</div>
         <div class="insight__row"><span class="insight__tag insight__tag--act">${t('insight.tag.action')}</span> ${escapeHtml(it.action||'')}</div>
         ${it.metric?`<div class="insight__row"><span class="insight__tag insight__tag--met">${t('insight.tag.metric')}</span> ${escapeHtml(it.metric)}</div>`:''}
+        ${examplesHtml}
+        ${drillBtn}
       </div>
-    </div>`).join('');
+    </div>`;
+  }).join('');
+
+  // wire up "see records" buttons — open drill-down for the example IDs
+  qsa('.insight__cta').forEach(b => b.addEventListener('click', () => {
+    const ids = b.dataset.ids.split(',').map(Number).filter(Boolean);
+    if (!ids.length) return;
+    // We don't have a direct "by id" filter, so use the first example body
+    // as a body_contains drill — gives the user the cluster that surfaced.
+    const card = b.closest('.insight');
+    const firstBody = card.querySelector('.insight__ex-body')?.textContent || '';
+    const title = card.querySelector('.insight__title')?.textContent || '';
+    if (firstBody.length > 3) {
+      openDrill({ title, body_contains: firstBody.slice(0, 30) });
+    }
+  }));
+}
+
+async function loadPeriodComparison() {
+  try {
+    const d = await fetch('/api/period_comparison?days=14').then(r => r.json());
+    const card = qs('#pop-card'); if (!card) return;
+    if (!d || !d.current || !d.current.total) { card.style.display = 'none'; return; }
+    card.style.display = '';
+    qs('#pop-meta').textContent = `${fmtDate(d.current_start)} → ${fmtDate(d.current_end)}`;
+    const cells = [
+      { key:'total',      label:t('pop.total'),      cur:d.current.total,      prev:d.previous.total,      delta:d.delta_pct.total,      good:'down' },
+      { key:'complaints', label:t('pop.complaints'), cur:d.current.complaints, prev:d.previous.complaints, delta:d.delta_pct.complaints, good:'down' },
+      { key:'high',       label:t('pop.high'),       cur:d.current.high,       prev:d.previous.high,       delta:d.delta_pct.high,       good:'down' },
+    ];
+    qs('#pop-grid').innerHTML = cells.map(c => {
+      const dCls = c.delta == null ? '' :
+        ((c.delta > 0 && c.good === 'down') || (c.delta < 0 && c.good !== 'down')) ? 'is-bad' : 'is-good';
+      const arrow = c.delta == null ? '' : c.delta > 0 ? '↑' : c.delta < 0 ? '↓' : '·';
+      const dTxt = c.delta == null ? t('na') : `${arrow} ${fmtPct(Math.abs(c.delta))}`;
+      return `<div class="pop">
+        <div class="pop__label">${c.label}</div>
+        <div class="pop__row"><span class="pop__cur">${fmtInt(c.cur)}</span>
+          <span class="pop__sep">←</span>
+          <span class="pop__prev">${fmtInt(c.prev)}</span></div>
+        <div class="pop__delta ${dCls}">${dTxt}</div>
+      </div>`;
+    }).join('');
+  } catch (e) { /* ignore */ }
 }
 
 /* axis helpers */

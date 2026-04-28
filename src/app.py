@@ -380,24 +380,17 @@ def insights(
     category: Optional[list[str]] = Query(None),
     severity: Optional[list[str]] = Query(None),
 ) -> JSONResponse:
-    """Return 3–4 actionable insights derived from the filtered slice.
+    """Return concrete actionable insights for the filtered slice.
 
-    Uses the local LLM if available, otherwise deterministic rule-based
-    insights generated from the same signals.
+    Always uses the deterministic engine (which produces structured output
+    with kind, examples, and measurable metrics — no LLM round-trip needed).
+    The /api/qa endpoint remains the LLM-driven free-form path.
     """
     fdf = _params(date_from, date_to, category, severity)
     if fdf.empty:
         return JSONResponse({"insights": [], "source": "empty"})
-
-    signals = analytics.build_signals_text(fdf)
-
-    # Prefer LLM if reachable; fall back to rule-based insights synthesised
-    # from the same signal pack.
-    res = llm_client.generate_insights(signals)
-    if res["insights"]:
-        return JSONResponse({"insights": res["insights"], "source": res["source"], "signals": signals})
-    rule_items = analytics.rule_based_insights(fdf)
-    return JSONResponse({"insights": rule_items, "source": "rule", "signals": signals})
+    items = analytics.rule_based_insights(fdf)
+    return JSONResponse({"insights": items, "source": "engine"})
 
 
 @app.get("/api/severity_weekly")
@@ -448,6 +441,20 @@ def topic_momentum_endpoint(
     fdf = _params(date_from, date_to, category, severity)
     df = analytics.topic_momentum(fdf, lookback_weeks=4, top_n=8)
     return JSONResponse(df.to_dict(orient="records"))
+
+
+# ---------- period comparison ----------
+
+@app.get("/api/period_comparison")
+def period_comparison(
+    date_from: Optional[date] = Query(None, alias="from"),
+    date_to: Optional[date] = Query(None, alias="to"),
+    category: Optional[list[str]] = Query(None),
+    severity: Optional[list[str]] = Query(None),
+    days: int = Query(14, ge=3, le=90),
+) -> JSONResponse:
+    fdf = _params(date_from, date_to, category, severity)
+    return JSONResponse(analytics.period_comparison(fdf, days=days))
 
 
 # ---------- forecasting + repeat-case intelligence ----------

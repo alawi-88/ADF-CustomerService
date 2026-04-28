@@ -161,73 +161,183 @@ class AnomalyAlert:
 def detect_weekly_anomalies(
     df: pd.DataFrame,
     *,
-    z_threshold: float = 1.8,
+    z_threshold: float = 1.3,
     min_count: int = 5,
+    scan_recent_weeks: int = 4,
 ) -> list[AnomalyAlert]:
-    """Flag categories/topics whose latest-week volume jumps vs. their own baseline."""
+    """Detect anomalies across the recent weeks (not just the latest, which is
+    often incomplete). Catches spikes AND sustained elevations.
+
+    Strategy:
+      • For each (category, topic), compute weekly counts.
+      • Treat the LAST FULL week as week-of-interest (skip the latest if it
+        appears mid-week / smaller than every prior).
+      • Compare its count against the prior baseline (mean+std over the rest).
+      • Also flag SUSTAINED elevation: count above baseline for ≥2 of last 3 weeks.
+    """
     if df.empty or "week_start" not in df.columns:
         return []
 
     df = df.copy()
     df["week_start"] = pd.to_datetime(df["week_start"])
     weeks = sorted(df["week_start"].dropna().unique())
+    if len(weeks) < 4:
+        return []
+
+    # Skip the very-latest week if it looks partial (count noticeably lower than
+    # the full series average — typical when data ends mid-week).
+    weekly_total = df.groupby("week_start").size().sort_index()
+    if len(weekly_total) >= 4:
+        latest_total = float(weekly_total.iloc[-1])
+        prior_avg = float(weekly_total.iloc[:-1].mean())
+        if latest_total < prior_avg * 0.4:
+            weeks = weeks[:-1]
     if len(weeks) < 3:
         return []
-    latest = weeks[-1]
-    history = weeks[:-1]
+    target_week = weeks[-1]
+    history_weeks = weeks[:-1]
 
     alerts: list[AnomalyAlert] = []
+    seen: set[tuple[str, str]] = set()
 
     for dim in ("category", "topic_label"):
         if dim not in df.columns:
             continue
-        # weekly counts per (week, value)
         wide = (
-            df.groupby(["week_start", dim])
-            .size()
-            .unstack(fill_value=0)
-            .sort_index()
+            df.groupby(["week_start", dim]).size().unstack(fill_value=0).sort_index()
         )
-        if latest not in wide.index:
+        if target_week not in wide.index:
             continue
-        latest_row = wide.loc[latest]
-        hist = wide.loc[wide.index.isin(history)]
+        target_row = wide.loc[target_week]
+        hist = wide.loc[wide.index.isin(history_weeks)]
 
-        for value, count in latest_row.items():
+        for value, count in target_row.items():
             if count < min_count:
                 continue
             series = hist[value] if value in hist.columns else pd.Series([0])
             mu = float(series.mean()) if len(series) else 0.0
             sd = float(series.std(ddof=0)) if len(series) > 1 else 0.0
+
+            # 1) z-score spike
+            z = 0.0
             if sd == 0:
-                # Cold start: flag if more than 2x the historical max
                 hist_max = float(series.max()) if len(series) else 0.0
-                if count > max(hist_max * 2, min_count):
-                    z = float("inf")
-                else:
-                    continue
+                if count > max(hist_max * 1.6, min_count):
+                    z = 99.0
             else:
                 z = (count - mu) / sd
-            if z >= z_threshold or z == float("inf"):
-                sev = "عالية" if (z >= 3 or z == float("inf")) else "متوسطة"
-                action = _action_for_anomaly(dim, value, count, mu, sev)
-                alerts.append(
-                    AnomalyAlert(
-                        week_start=pd.Timestamp(latest),
-                        dimension=dim,
-                        value=str(value),
-                        count=int(count),
-                        baseline_mean=mu,
-                        baseline_std=sd,
-                        z_score=float(z if z != float("inf") else 99.0),
-                        severity=sev,
-                        suggested_action=action,
-                    )
-                )
 
-    # Most extreme first
+            if z >= z_threshold:
+                sev = "عالية" if z >= 2.5 else "متوسطة"
+                key = (dim, str(value))
+                if key not in seen:
+                    seen.add(key)
+                    alerts.append(AnomalyAlert(
+                        week_start=pd.Timestamp(target_week),
+                        dimension=dim, value=str(value), count=int(count),
+                        baseline_mean=mu, baseline_std=sd,
+                        z_score=float(z),
+                        severity=sev,
+                        suggested_action=_action_for_anomaly(dim, value, count, mu, sev),
+                    ))
+                continue
+
+            # 2) sustained elevation: 2+ of last 3 weeks above baseline
+            last3_keys = weeks[-min(3, len(weeks)):]
+            if value in wide.columns:
+                last3 = wide.loc[wide.index.isin(last3_keys), value].values
+                if len(last3) >= 3 and mu > 0:
+                    elevated = sum(1 for v in last3 if v > mu * 1.25 and v >= min_count)
+                    if elevated >= 2:
+                        key = (dim, str(value))
+                        if key not in seen:
+                            seen.add(key)
+                            alerts.append(AnomalyAlert(
+                                week_start=pd.Timestamp(target_week),
+                                dimension=dim, value=str(value), count=int(count),
+                                baseline_mean=mu, baseline_std=sd,
+                                z_score=1.0,
+                                severity="متوسطة",
+                                suggested_action=(
+                                    f"ارتفاع متواصل في «{value}» على مدى أسابيع عدة "
+                                    "(مستوى أعلى من المتوسط بـ 25٪ أو أكثر). "
+                                    + _action_for_anomaly(dim, value, count, mu, "متوسطة")
+                                ),
+                            ))
+
+    # 3) New-emergence: topic that wasn't present in earlier history but is now
+    if "topic_label" in df.columns and len(weeks) >= 6:
+        early = set(df[df["week_start"].isin(weeks[:len(weeks)//2])]["topic_label"].unique())
+        recent_subset = df[df["week_start"].isin(weeks[-3:])]
+        recent_counts = recent_subset["topic_label"].value_counts()
+        for topic, count in recent_counts.items():
+            if topic in early or count < min_count * 2:
+                continue
+            key = ("topic_label", str(topic))
+            if key in seen:
+                continue
+            seen.add(key)
+            alerts.append(AnomalyAlert(
+                week_start=pd.Timestamp(target_week),
+                dimension="topic_label", value=str(topic), count=int(count),
+                baseline_mean=0.0, baseline_std=0.0, z_score=99.0,
+                severity="متوسطة",
+                suggested_action=(
+                    f"موضوع جديد ظهر مؤخراً «{topic}» بحجم {int(count)} طلب — "
+                    "يستحق فهم سببه قبل أن يتوسّع."
+                ),
+            ))
+
     alerts.sort(key=lambda a: (-a.z_score, -a.count))
-    return alerts
+
+    # 4) FALLBACK — if no spike-based alerts surface, identify the top
+    # high-severity hotspots (categories/topics whose high-severity rate
+    # is significantly above the dataset average). These are always
+    # actionable signals worth monitoring even without a recent spike.
+    if not alerts:
+        avg_high_pct = float((df["severity"] == "عالية").mean() * 100.0)
+        # category hotspots
+        cat_stats = df.groupby("category").agg(
+            count=("severity", "size"),
+            high_count=("severity", lambda s: int((s == "عالية").sum())),
+        )
+        cat_stats["high_pct"] = cat_stats["high_count"] / cat_stats["count"] * 100.0
+        cat_hot = cat_stats[(cat_stats["high_pct"] >= max(avg_high_pct * 1.5, 30))
+                            & (cat_stats["count"] >= min_count * 4)]
+        for cat, row in cat_hot.iterrows():
+            alerts.append(AnomalyAlert(
+                week_start=pd.Timestamp(target_week),
+                dimension="category", value=str(cat), count=int(row["count"]),
+                baseline_mean=avg_high_pct, baseline_std=0.0, z_score=1.0,
+                severity="عالية" if row["high_pct"] >= 60 else "متوسطة",
+                suggested_action=(
+                    f"بؤرة خطورة عالية: «{cat}» تسجل {row['high_pct']:.0f}٪ "
+                    f"من طلباتها بخطورة عالية (مقابل متوسط {avg_high_pct:.0f}٪ "
+                    "في كامل البيانات). مراجعة جذور هذه الفئة وإطلاق إصلاحات سريعة."
+                ),
+            ))
+        # topic hotspots (high-volume + high-severity)
+        if "topic_label" in df.columns:
+            top = top_recurring_topics(df, top_n=15)
+            top_hot = top[(top["high_pct"] >= max(avg_high_pct * 1.5, 35))
+                          & (top["count"] >= min_count * 4)].head(5)
+            for _, row in top_hot.iterrows():
+                alerts.append(AnomalyAlert(
+                    week_start=pd.Timestamp(target_week),
+                    dimension="topic_label", value=str(row["topic_label"]),
+                    count=int(row["count"]),
+                    baseline_mean=avg_high_pct, baseline_std=0.0, z_score=1.0,
+                    severity="عالية" if row["high_pct"] >= 70 else "متوسطة",
+                    suggested_action=(
+                        f"تركّز الخطورة في «{row['topic_label']}» — "
+                        f"{row['high_pct']:.0f}٪ من {int(row['count'])} طلب "
+                        "بخطورة عالية. مراجعة سياسة الاستجابة لهذا الموضوع "
+                        "وتفعيل قناة سريعة لمعالجته."
+                    ),
+                ))
+        alerts.sort(key=lambda a: -a.count)
+
+    return alerts[:15]
 
 
 def _action_for_anomaly(dim: str, value: str, count: int,
@@ -551,46 +661,79 @@ def _topic_action_map(topic: str) -> tuple[str, str]:
             "إحالة المسار إلى الجهة المعنية مع SLA لا يتجاوز 3 أيام عمل.")
 
 
-def rule_based_insights(df: pd.DataFrame) -> list[dict]:
-    """Deterministic insights for financial-services CX when no LLM is available.
+def _examples_for(df: pd.DataFrame, n: int = 3, **filters) -> list[dict]:
+    """Pick representative examples (id + body excerpt) matching filters."""
+    sl = df
+    for col, val in filters.items():
+        if col == "topic_label":
+            sl = sl[sl["topic_label"] == val]
+        elif col == "category":
+            sl = sl[sl["category"] == val]
+        elif col == "severity":
+            sl = sl[sl["severity"] == val]
+    sl = sl.sort_values("closed_at", ascending=False).head(n)
+    out = []
+    for _, r in sl.iterrows():
+        body = str(r.get("body") or "").strip()
+        if len(body) > 70:
+            body = body[:70].rstrip() + "…"
+        out.append({"id": int(r["request_id"]), "body": body})
+    return out
 
-    Each insight: {title, evidence, action, metric}.
+
+def rule_based_insights(df: pd.DataFrame) -> list[dict]:
+    """Concrete, evidence-backed insights for financial-services CX.
+
+    Each insight carries: title, evidence (with numbers), action (with unit),
+    metric (measurable target), kind (icon/color hint), and 2-3 example
+    request IDs from the actual data.
     """
     out: list[dict] = []
     if df.empty:
         return out
 
     k = compute_kpis(df)
+    topics = top_recurring_topics(df, top_n=12)
 
-    # 1) Anomalies — most actionable first
+    # 1) Anomalies — surface up to 2
     alerts = detect_weekly_anomalies(df)
-    if alerts:
-        a = alerts[0]
+    for a in alerts[:2]:
         unit, _ = _topic_action_map(a.value)
+        if a.dimension == "category":
+            ex = _examples_for(df, category=a.value)
+        else:
+            ex = _examples_for(df, topic_label=a.value)
+        evidence = (
+            f"رصد النظام {a.count} طلب في «{a.value}» مقابل متوسط تاريخي "
+            f"{a.baseline_mean:.0f} طلب/أسبوع."
+            if a.baseline_mean > 0 else
+            f"رصد النظام {a.count} طلب جديد في «{a.value}» — لم يكن مرئياً سابقاً."
+        )
         out.append({
-            "title": f"ارتفاع غير معتاد في «{a.value}» خلال آخر أسبوع",
-            "evidence": (
-                f"رصد النظام {a.count} طلب في آخر أسبوع مقابل متوسط تاريخي "
-                f"{a.baseline_mean:.0f} (انحراف معياري {a.z_score:.1f}σ)."
-            ),
-            "action": f"تكليف ({unit}) بمراجعة الموجة فوراً، {a.suggested_action}",
+            "kind": "anomaly",
+            "title": f"تنبيه: ارتفاع في «{a.value}»",
+            "evidence": evidence,
+            "action": f"تكليف ({unit}) بفحص الموجة فوراً. {a.suggested_action}",
             "metric": "عودة الحجم الأسبوعي إلى المتوسط التاريخي خلال أسبوعين.",
+            "examples": ex,
         })
 
     # 2) Topic with high-severity concentration
-    topics = top_recurring_topics(df, top_n=10)
     bad = topics[(topics["high_pct"] >= 50) & (topics["count"] >= 30)]
     if not bad.empty:
         r = bad.iloc[0]
         unit, action_body = _topic_action_map(r["topic_label"])
+        ex = _examples_for(df, topic_label=r["topic_label"], severity="عالية")
         out.append({
-            "title": f"موضوع «{r['topic_label']}» يستنزف موارد الفريق بخطورة عالية",
+            "kind": "risk",
+            "title": f"موضوع «{r['topic_label']}» يستنزف موارد الفريق",
             "evidence": (
                 f"{int(r['count'])} طلب في الفترة، منها {r['high_pct']:.0f}٪ "
                 f"بخطورة عالية — أعلى تركيز خطورة بين الموضوعات."
             ),
             "action": f"إحالة المسار إلى ({unit}). {action_body}",
             "metric": f"خفض نسبة الخطورة العالية في الموضوع إلى ما دون 30٪ خلال 6 أسابيع.",
+            "examples": ex,
         })
 
     # 3) Topic momentum (rising)
@@ -599,57 +742,135 @@ def rule_based_insights(df: pd.DataFrame) -> list[dict]:
     if not rising.empty:
         r = rising.iloc[0]
         unit, action_body = _topic_action_map(r["topic_label"])
+        ex = _examples_for(df, topic_label=r["topic_label"])
         out.append({
-            "title": f"تصاعد متسارع في موضوع «{r['topic_label']}»",
+            "kind": "momentum",
+            "title": f"موضوع متصاعد: «{r['topic_label']}»",
             "evidence": (
                 f"الطلبات ارتفعت من {int(r['prior'])} إلى {int(r['recent'])} "
                 f"(+{r['growth_pct']:.0f}٪) في آخر 4 أسابيع."
             ),
             "action": f"({unit}): {action_body}",
             "metric": "خفض الطلبات في هذا الموضوع بنسبة 30٪ خلال شهر.",
+            "examples": ex,
         })
 
-    # 4) Complaint rate
+    # 4) Complaint rate + the topic driving it
     if k.pct_complaints >= 15:
         top_complaint_topic = (
             df[df["category"] == "شكوى"]["topic_label"].value_counts().head(1)
         )
         topic_name = top_complaint_topic.index[0] if not top_complaint_topic.empty else "—"
         topic_count = int(top_complaint_topic.iloc[0]) if not top_complaint_topic.empty else 0
+        ex = _examples_for(df, category="شكوى", topic_label=topic_name)
         out.append({
-            "title": "ارتفاع نسبة الشكاوى يستحق إصلاحاً منهجياً",
+            "kind": "complaints",
+            "title": "نسبة الشكاوى تستحق إصلاحاً منهجياً",
             "evidence": (
-                f"الشكاوى تمثّل {k.pct_complaints:.0f}٪ من إجمالي الطلبات. "
-                f"أكبر مساهم: «{topic_name}» بـ{topic_count} شكوى."
+                f"الشكاوى تمثّل {k.pct_complaints:.0f}٪ من إجمالي الطلبات "
+                f"({_count_in(df, 'شكوى')} طلب). أكبر مساهم: «{topic_name}» بـ{topic_count} شكوى."
             ),
             "action": (
-                "تشكيل فريق من إدارة تجربة المستفيد + إدارة العمليات لمراجعة "
-                "أسباب الشكاوى المرتبطة بـ«" + topic_name + "» وإطلاق إصلاحات سريعة."
+                f"تشكيل فريق سريع لمراجعة أسباب الشكاوى المرتبطة بـ«{topic_name}» "
+                "وإطلاق إصلاحات قصيرة المدى خلال أسبوعين."
             ),
             "metric": "خفض نسبة الشكاوى الكلية إلى أقل من 12٪ خلال شهرين.",
+            "examples": ex,
         })
 
-    # 5) Beneficiary self-service opportunity
+    # 5) Self-service opportunity
     info_topics = topics[topics["topic_label"].astype(str).str.contains(
         "استعلام|تحديث|الاستفسار", regex=True, na=False
     )]
     info_total = int(info_topics["count"].sum()) if not info_topics.empty else 0
     if info_total >= 200:
         share = info_total / k.total * 100
+        topic_name = info_topics["topic_label"].iloc[0]
+        ex = _examples_for(df, topic_label=topic_name)
         out.append({
-            "title": "فرصة لخفض الطلبات الإدارية عبر الخدمة الذاتية",
+            "kind": "opportunity",
+            "title": "فرصة خفض الحمل عبر الخدمة الذاتية",
             "evidence": (
                 f"الطلبات الإدارية (استعلامات وتحديث بيانات) تمثّل {share:.0f}٪ "
-                f"من الإجمالي ({info_total} طلب)."
+                f"من الإجمالي ({info_total} طلب) — معظمها قابل للأتمتة."
             ),
             "action": (
-                "تفعيل واجهة خدمة ذاتية للاستعلامات الأكثر تكراراً عبر بوابة "
-                "الصندوق وتطبيق الجوال، مع روابط مباشرة من رسائل الإشعارات."
+                "تفعيل واجهة خدمة ذاتية للاستعلامات المتكرّرة على البوابة وتطبيق "
+                "الجوال، مع روابط مباشرة من رسائل الإشعار."
             ),
             "metric": "خفض حجم هذه الطلبات في القناة البشرية بنسبة 25٪ خلال 8 أسابيع.",
+            "examples": ex,
         })
 
-    return out[:5]
+    # 6) Recurring beneficiary issues
+    recur = find_recurring_cases(df, min_repeats=4, lookback_days=60)
+    if not recur.empty:
+        top = recur.iloc[0]
+        ex = [{"id": int(i), "body": top["phrase"][:70]} for i in (top["sample_ids"] or [])[:3]]
+        out.append({
+            "kind": "recurring",
+            "title": f"حالة متكرّرة: «{top['phrase'][:50]}»",
+            "evidence": (
+                f"النص نفسه ورد {int(top['count'])} مرة خلال آخر 60 يوماً، "
+                f"غالبيته في فئة «{top['top_category']}»، "
+                f"وبنسبة خطورة عالية {top['high_pct']:.0f}٪."
+            ),
+            "action": (
+                "فحص ما إذا كان الطلب يأتي من مستفيد واحد متكرّر أم من عدة "
+                "مستفيدين بنفس المشكلة — والمعالجة وفقاً لذلك."
+            ),
+            "metric": "إغلاق جذور المشكلة وإيقاف تكرار النص خلال شهر.",
+            "examples": ex,
+        })
+
+    return out[:6]
+
+
+def _count_in(df: pd.DataFrame, category: str) -> int:
+    return int((df["category"] == category).sum())
+
+
+# ---------- Period-over-period comparison ----------
+
+def period_comparison(df: pd.DataFrame, days: int = 14) -> dict:
+    """Compare the most recent `days` window with the immediately preceding one."""
+    if df.empty:
+        return {}
+    df = df.copy()
+    df["closed_at"] = pd.to_datetime(df["closed_at"])
+    end = df["closed_at"].max()
+    cur_start = end - pd.Timedelta(days=days)
+    prev_end = cur_start
+    prev_start = prev_end - pd.Timedelta(days=days)
+    cur = df[df["closed_at"] >= cur_start]
+    prev = df[(df["closed_at"] >= prev_start) & (df["closed_at"] < prev_end)]
+
+    def block(slice_):
+        return {
+            "total": int(len(slice_)),
+            "complaints": int((slice_["category"] == "شكوى").sum()),
+            "high": int((slice_["severity"] == "عالية").sum()),
+        }
+
+    cur_b = block(cur); prev_b = block(prev)
+    def delta_pct(c, p):
+        if p == 0:
+            return None if c == 0 else 100.0
+        return round((c - p) / p * 100.0, 1)
+    return {
+        "window_days": days,
+        "current_start": cur_start.strftime("%Y-%m-%d"),
+        "current_end": end.strftime("%Y-%m-%d"),
+        "previous_start": prev_start.strftime("%Y-%m-%d"),
+        "previous_end": prev_end.strftime("%Y-%m-%d"),
+        "current": cur_b,
+        "previous": prev_b,
+        "delta_pct": {
+            "total": delta_pct(cur_b["total"], prev_b["total"]),
+            "complaints": delta_pct(cur_b["complaints"], prev_b["complaints"]),
+            "high": delta_pct(cur_b["high"], prev_b["high"]),
+        },
+    }
 
 
 def summarize_for_qa(df: pd.DataFrame, max_topics: int = 6) -> str:
