@@ -119,6 +119,22 @@
           <input id="filter-search" type="text" class="input" placeholder="">
         </div>
 
+        <div class="field">
+          <div class="field__head">
+            <label class="field__label" data-i18n="filters.status"></label>
+            <button class="link-btn" data-toggle-group="statuses" data-i18n="filters.toggle"></button>
+          </div>
+          <div id="filter-status" class="checks"></div>
+        </div>
+
+        <div class="field">
+          <div class="field__head">
+            <label class="field__label" data-i18n="filters.assignee"></label>
+            <button class="link-btn" data-toggle-group="assignees" data-i18n="filters.toggle"></button>
+          </div>
+          <div id="filter-assignee" class="checks"></div>
+        </div>
+
         <button id="reset-filters" class="btn btn--ghost btn--small" style="width:100%" data-i18n="filters.reset"></button>
         <div id="filter-state" class="filter-state">—</div>
       </div>
@@ -251,8 +267,12 @@
               <svg class="icon" style="color:var(--primary)"><use href="#i-bulb"/></svg>
               <span data-i18n="chart.linked"></span>
             </h2>
-            <span class="card__hint" data-i18n="chart.linked.hint"></span>
+            <button id="btn-llm-refine" class="btn btn--ghost btn--small">
+              <svg class="icon"><use href="#i-bulb"/></svg>
+              <span data-i18n="linked.refine"></span>
+            </button>
           </div>
+          <div class="card__hint" data-i18n="chart.linked.hint" style="padding:0 var(--s-5) var(--s-2);color:var(--ink-faint);font-size:var(--fs-xs)"></div>
           <div id="linked-list"></div>
         </div>
 
@@ -472,6 +492,7 @@ const I18N = {
     'filters.title':'عوامل التصفية','filters.from':'من','filters.to':'إلى',
     'filters.category':'الفئة','filters.severity':'الخطورة','filters.search':'بحث في النصوص',
     'filters.toggle':'تحديد/إلغاء الكل','filters.reset':'إعادة تعيين',
+    'filters.status':'حالة التذكرة','filters.assignee':'المسؤول','filters.unassigned':'غير مسنَد',
     'overview.title':'نظرة عامة','overview.subtitle':'مؤشرات أداء قنوات المشاركة والرؤى المستخلصة من بيانات المستفيدين خلال الفترة المحددة.',
     'overview.insights':'رؤى عملية مقترحة','overview.insights.hint':'يحلّل النظام كامل البيانات لاستخراج توصيات قابلة للتنفيذ هذا الأسبوع.',
     'patterns.title':'الأنماط والاتجاهات','patterns.subtitle':'الموضوعات المتكرّرة، اتجاهات الخطورة عبر الزمن، والموضوعات المتصاعدة في الفترة الأخيرة.',
@@ -536,6 +557,9 @@ const I18N = {
     'linked.response':'الإجراء الموصى به للموظف',
     'linked.examples':'أمثلة',
     'linked.tickets':'فتح كل التذاكر',
+    'linked.refine':'تنقيح بالذكاء الاصطناعي',
+    'linked.refining':'جاري التحليل…',
+    'linked.rationale':'سبب التحليل',
     'pop.title':'مقارنة آخر أسبوعين بالأسبوعين السابقين',
     'pop.total':'إجمالي الطلبات','pop.complaints':'الشكاوى','pop.high':'الخطورة العالية',
     'pop.empty':'لا تتوفر بيانات كافية للمقارنة',
@@ -552,6 +576,7 @@ const I18N = {
     'ticket.no_history':'لا تغييرات بعد.',
     'ticket.record':'تفاصيل الطلب','ticket.recommended':'الإجراء المقترح',
     'ticket.column':'الحالة',
+    'ticket.severity_ai_default':'تصنيف ذكي (تلقائي)',
     'status.open':'مفتوح','status.in_progress':'قيد المعالجة','status.pending':'بانتظار رد',
     'status.resolved':'محلول','status.closed':'مغلق',
     'history.changed':'غيّر الحالة من','history.to':'إلى',
@@ -568,6 +593,7 @@ const I18N = {
     'filters.title':'Filters','filters.from':'From','filters.to':'To',
     'filters.category':'Category','filters.severity':'Severity','filters.search':'Search text',
     'filters.toggle':'Select / clear all','filters.reset':'Reset',
+    'filters.status':'Ticket status','filters.assignee':'Assignee','filters.unassigned':'Unassigned',
     'overview.title':'Overview','overview.subtitle':'Channel performance KPIs and AI-derived insights from beneficiary submissions in the selected period.',
     'overview.insights':'Actionable insights','overview.insights.hint':'AI scans all submissions to surface concrete actions for this week.',
     'patterns.title':'Patterns & trends','patterns.subtitle':'Recurring topics, severity trends over time, and rising themes in the recent period.',
@@ -632,6 +658,9 @@ const I18N = {
     'linked.response':'Recommended employee response',
     'linked.examples':'Examples',
     'linked.tickets':'Open all tickets',
+    'linked.refine':'Refine with AI',
+    'linked.refining':'Analysing…',
+    'linked.rationale':'Why',
     'pop.title':'Last two weeks vs the prior two',
     'pop.total':'Total requests','pop.complaints':'Complaints','pop.high':'High severity',
     'pop.empty':'Not enough data to compare',
@@ -647,6 +676,7 @@ const I18N = {
     'ticket.send':'Send','ticket.no_comments':'No comments yet.','ticket.no_history':'No status changes yet.',
     'ticket.record':'Request details','ticket.recommended':'Recommended action',
     'ticket.column':'Status',
+    'ticket.severity_ai_default':'AI default',
     'status.open':'Open','status.in_progress':'In progress','status.pending':'Awaiting reply',
     'status.resolved':'Resolved','status.closed':'Closed',
     'history.changed':'changed status from','history.to':'to',
@@ -744,7 +774,7 @@ const PLOTLY_CONFIG = { displayModeBar:false, responsive:true };
 
 const state = {
   meta:null,
-  filters:{ from:'', to:'', categories:[], severities:[], search:'' },
+  filters:{ from:'', to:'', categories:[], severities:[], search:'', statuses:[], assignees:[] },
   page:'overview',
   refreshTimer:null,
   cache:{},
@@ -791,19 +821,34 @@ async function bootstrap() {
   state.filters.from = state.meta.date_min;
   state.filters.to   = state.meta.date_max;
 
-  renderChecks('#filter-cats', state.meta.categories, 'categories');
-  renderChecks('#filter-sev',  state.meta.severities, 'severities');
+  renderChecks('#filter-cats', state.meta.categories, 'categories', state.meta.categories_en);
+  renderChecks('#filter-sev',  state.meta.severities, 'severities', state.meta.severities_en);
 
   // load users + statuses for the ticket system
   try {
     const u = await fetch('/api/users').then(r => r.json());
     state.users = u.users || []; state.statuses = u.statuses || [];
     populateActor();
+    // populate status + assignee filter pills
+    const statusItems    = state.statuses.map(s => s.id);
+    const statusLabelsAr = state.statuses.map(s => s.label_ar);
+    const statusLabelsEn = state.statuses.map(s => s.label_en);
+    state.meta._status_labels_ar = statusLabelsAr;
+    state.meta._status_labels_en = statusLabelsEn;
+    renderStatusChecks(statusItems, statusLabelsAr, statusLabelsEn);
+    const assigneeItems = ['unassigned', ...state.users.map(u => u.id)];
+    const assigneeAr = [t('filters.unassigned'), ...state.users.map(u => u.name)];
+    const assigneeEn = ['Unassigned', ...state.users.map(u => u.name_en)];
+    state.meta._assignee_labels_ar = assigneeAr;
+    state.meta._assignee_labels_en = assigneeEn;
+    renderAssigneeChecks(assigneeItems, assigneeAr, assigneeEn);
   } catch (e) { /* tickets unavailable — non-fatal */ }
 
   bindNav(); bindFilters(); bindActions(); bindQA(); bindUpload(); bindDataPage();
   bindLang(); bindDrill(); bindDrillTriggers(); bindTicketDrawer();
   bindPresets(); bindActor();
+  const refineBtn = qs('#btn-llm-refine');
+  if (refineBtn) refineBtn.addEventListener('click', refineLinkedWithLLM);
 
   await refreshAll();
   bindPlotlyClicks();
@@ -958,6 +1003,15 @@ async function renderTicket(requestId) {
         <span>${t('ticket.assignee')}</span>
         <select id="tk-assignee">${userOptions}</select>
       </label>
+      <label class="tk-ctl">
+        <span>${t('col.severity')}${tk.severity_override?' ✎':''}</span>
+        <select id="tk-severity">
+          <option value="">${t('ticket.severity_ai_default')}</option>
+          <option value="عالية"   ${tk.severity_override==='عالية'?'selected':''}>${t('sev.high')}</option>
+          <option value="متوسطة"  ${tk.severity_override==='متوسطة'?'selected':''}>${t('sev.med')}</option>
+          <option value="منخفضة"  ${tk.severity_override==='منخفضة'?'selected':''}>${t('sev.low')}</option>
+        </select>
+      </label>
     </div>
 
     <div class="tk-rec-action">
@@ -995,6 +1049,14 @@ async function renderTicket(requestId) {
     await renderTicket(requestId);
     await loadActions();
   });
+  qs('#tk-severity').addEventListener('change', async (e) => {
+    await fetch('/api/ticket/' + requestId + '/severity', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ severity: e.target.value || null, by_id: state.actor }),
+    });
+    await renderTicket(requestId);
+    await loadActions();
+  });
   qs('#tk-send').addEventListener('click', async () => {
     const text = qs('#tk-comment').value.trim();
     if (!text) return;
@@ -1028,11 +1090,55 @@ function showEmptyState() {
   </div>`;
 }
 
-function renderChecks(sel, items, key) {
+function renderStatusChecks(items, labels_ar, labels_en) {
+  const root = qs('#filter-status');
+  root.innerHTML = items.map((v, i) => {
+    const label = LANG === 'en' ? labels_en[i] : labels_ar[i];
+    return `<label class="check is-on" data-val="${escapeHtml(v)}"><input type="checkbox" checked>${escapeHtml(label)}</label>`;
+  }).join('');
+  state.filters.statuses = items.slice();
+  qsa('label.check', root).forEach(el => el.addEventListener('click', (e) => {
+    e.preventDefault();
+    const v = el.dataset.val;
+    const arr = state.filters.statuses;
+    if (el.classList.contains('is-on')) {
+      el.classList.remove('is-on');
+      state.filters.statuses = arr.filter(x => x !== v);
+    } else {
+      el.classList.add('is-on');
+      state.filters.statuses = arr.concat(v);
+    }
+    scheduleRefresh();
+  }));
+}
+function renderAssigneeChecks(items, labels_ar, labels_en) {
+  const root = qs('#filter-assignee');
+  root.innerHTML = items.map((v, i) => {
+    const label = LANG === 'en' ? labels_en[i] : labels_ar[i];
+    return `<label class="check is-on" data-val="${escapeHtml(v)}"><input type="checkbox" checked>${escapeHtml(label)}</label>`;
+  }).join('');
+  state.filters.assignees = items.slice();
+  qsa('label.check', root).forEach(el => el.addEventListener('click', (e) => {
+    e.preventDefault();
+    const v = el.dataset.val;
+    const arr = state.filters.assignees;
+    if (el.classList.contains('is-on')) {
+      el.classList.remove('is-on');
+      state.filters.assignees = arr.filter(x => x !== v);
+    } else {
+      el.classList.add('is-on');
+      state.filters.assignees = arr.concat(v);
+    }
+    scheduleRefresh();
+  }));
+}
+
+function renderChecks(sel, items, key, labels_en) {
   const root = qs(sel);
-  root.innerHTML = items.map(v =>
-    `<label class="check is-on" data-val="${escapeHtml(v)}"><input type="checkbox" checked>${escapeHtml(v)}</label>`
-  ).join('');
+  root.innerHTML = items.map((v, i) => {
+    const label = LANG === 'en' && labels_en && labels_en[i] ? labels_en[i] : v;
+    return `<label class="check is-on" data-val="${escapeHtml(v)}" data-en="${escapeHtml(labels_en?labels_en[i]:'')}"><input type="checkbox" checked>${escapeHtml(label)}</label>`;
+  }).join('');
   state.filters[key] = items.slice();
   qsa('label.check', root).forEach(el => {
     el.addEventListener('click', (e) => {
@@ -1077,11 +1183,14 @@ function bindFilters() {
   qsa('[data-toggle-group]').forEach(b => b.addEventListener('click', (e) => {
     e.preventDefault();
     const grp = b.dataset.toggleGroup;
-    const sel = grp === 'categories' ? '#filter-cats' : '#filter-sev';
+    const sel = ({categories:'#filter-cats', severities:'#filter-sev',
+                  statuses:'#filter-status', assignees:'#filter-assignee'})[grp];
+    if (!sel) return;
     const items = qsa(sel + ' label.check');
     const allOn = items.every(el => el.classList.contains('is-on'));
     items.forEach(el => el.classList.toggle('is-on', !allOn));
-    state.filters[grp] = allOn ? [] : (grp === 'categories' ? state.meta.categories.slice() : state.meta.severities.slice());
+    if (allOn) state.filters[grp] = [];
+    else state.filters[grp] = items.map(el => el.dataset.val);
     scheduleRefresh();
   }));
 }
@@ -1537,8 +1646,9 @@ function renderWeekly(d) {
 function renderCategories(items) {
   const colors = items.map((_,i)=>CATEGORY_PALETTE[i%CATEGORY_PALETTE.length]);
   const total = items.reduce((s,i)=>s+i.count,0)||1;
+  const labelOf = (i) => LANG === 'en' ? (i.label_en || CATEGORY_EN[i.label] || i.label) : i.label;
   Plotly.newPlot('chart-categories', [{
-    type:'pie', labels: items.map(i=>i.label), values: items.map(i=>i.count),
+    type:'pie', labels: items.map(labelOf), values: items.map(i=>i.count),
     hole:0.55, marker:{ colors, line:{ color:'#fff', width:2 } },
     text: items.map(i => fmtPct(i.count/total*100)), textinfo:'text',
     textposition:'inside', insidetextorientation:'horizontal',
@@ -1548,8 +1658,8 @@ function renderCategories(items) {
   if (items.length) {
     const top = items[0], low = items[items.length-1];
     qs('#cap-categories').textContent = t('caption.cats', {
-      top: top.label, topPct: fmtPct(top.count/total*100),
-      low: low.label, lowPct: fmtPct(low.count/total*100),
+      top: labelOf(top), topPct: fmtPct(top.count/total*100),
+      low: labelOf(low), lowPct: fmtPct(low.count/total*100),
     });
   }
 }
@@ -1625,9 +1735,10 @@ function renderForecast(d) {
 function renderTopics(rows) {
   if (!rows.length) { qs('#chart-topics').innerHTML = `<div class="empty">${t('drawer.empty')}</div>`; return; }
   const sorted = rows.slice().sort((a,b)=>a.count-b.count);
+  const topicLbl = (r) => LANG === 'en' ? (r.topic_label_en || r.topic_label) : r.topic_label;
   Plotly.newPlot('chart-topics', [{
     type:'bar', orientation:'h',
-    x: sorted.map(r=>r.count), y: sorted.map(r=>r.topic_label),
+    x: sorted.map(r=>r.count), y: sorted.map(topicLbl),
     text: sorted.map(r => `${fmtInt(r.count)}  ·  ${fmtPct(r.high_pct)}`),
     textposition:'outside', cliponaxis:false,
     textfont:{ color:DGA.ink, size:12 },
@@ -1642,16 +1753,17 @@ function renderTopics(rows) {
   }, PLOTLY_CONFIG);
   const top = rows[0];
   qs('#cap-topics').textContent = t('caption.topics', {
-    name: top.topic_label, count: fmtInt(top.count), high: fmtPct(top.high_pct),
+    name: topicLbl(top), count: fmtInt(top.count), high: fmtPct(top.high_pct),
   });
 }
 function renderWeeklyByCat(d) {
   if (!d.x.length) { qs('#chart-weekly-cat').innerHTML = `<div class="empty">${t('drawer.empty')}</div>`; return; }
+  const seriesName = (s) => LANG === 'en' ? (s.name_en || CATEGORY_EN[s.name] || s.name) : s.name;
   const traces = d.series.map((s,i) => ({
-    x:d.x, y:s.y, name:s.name, type:'scatter', mode:'lines',
+    x:d.x, y:s.y, name: seriesName(s), type:'scatter', mode:'lines',
     line:{ color: CATEGORY_PALETTE[i%CATEGORY_PALETTE.length], width:2 },
     customdata: s.y.map(v=>fmtInt(v)),
-    hovertemplate:'<b>%{x}</b> · '+s.name+'<br>%{customdata}<extra></extra>',
+    hovertemplate:'<b>%{x}</b> · '+seriesName(s)+'<br>%{customdata}<extra></extra>',
   }));
   const allY = d.series.flatMap(s=>s.y);
   Plotly.newPlot('chart-weekly-cat', traces, {
@@ -1693,10 +1805,11 @@ function renderSeverityWeekly(d) {
 function renderMomentum(rows) {
   const root = qs('#momentum-list');
   if (!rows.length) { root.innerHTML = `<div class="empty"><p>${t('drawer.empty')}</p></div>`; return; }
+  const topicLbl = (r) => LANG === 'en' ? (r.topic_label_en || r.topic_label) : r.topic_label;
   root.innerHTML = rows.map(r => {
     const up = r.growth_pct >= 0;
     return `<div class="momentum drillable" data-topic="${escapeHtml(r.topic_label)}">
-      <div class="momentum__name">${escapeHtml(r.topic_label)}</div>
+      <div class="momentum__name">${escapeHtml(topicLbl(r))}</div>
       <div class="momentum__nums num">${fmtInt(r.recent)} <span class="momentum__sep">←</span> ${fmtInt(r.prior)}</div>
       <div class="momentum__delta ${up?'is-up':'is-down'}">${up?'↑':'↓'} ${fmtPct(Math.abs(r.growth_pct))}</div>
     </div>`;
@@ -1706,8 +1819,9 @@ function renderMomentum(rows) {
 }
 function renderMatrix(d) {
   if (!d.categories.length) { qs('#chart-matrix').innerHTML = `<div class="empty">${t('drawer.empty')}</div>`; return; }
+  const ys = LANG === 'en' && d.categories_en ? d.categories_en : d.categories;
   Plotly.newPlot('chart-matrix', [{
-    z: d.values, x: d.severities.map(SEV_LABEL), y: d.categories,
+    z: d.values, x: d.severities.map(SEV_LABEL), y: ys,
     type:'heatmap', colorscale:[[0,'#FFFFFF'],[1,DGA.primary]], showscale:true,
     text: d.values.map(row => row.map(v => v ? fmtInt(v) : '')),
     texttemplate:'%{text}', textfont:{ color: DGA.ink, size: 12 },
@@ -1717,7 +1831,7 @@ function renderMatrix(d) {
   // find peak cell
   let peak = { v: 0, cat: '', sev: '' };
   d.values.forEach((row,i) => row.forEach((v,j) => {
-    if (v > peak.v) peak = { v, cat: d.categories[i], sev: d.severities[j] };
+    if (v > peak.v) peak = { v, cat: ys[i], sev: d.severities[j] };
   }));
   qs('#cap-matrix').textContent = t('caption.matrix', { pair: `${peak.cat} × ${SEV_LABEL(peak.sev)}` });
 }
@@ -1734,10 +1848,16 @@ function renderLinked(groups) {
         <span class="insight__ex-id">#${nm(e.id)}</span>
         <span class="insight__ex-body">${escapeHtml(e.body || '')}</span>
       </div>`).join('');
+    const rationale = g.rationale ? `
+      <div class="linked__row">
+        <span class="linked__label" style="background:#F2EFFA;color:#5505CD">${t('linked.rationale')}</span>
+        <div class="linked__txt" style="color:var(--ink-muted);font-size:var(--fs-sm)">${escapeHtml(g.rationale)}</div>
+      </div>` : '';
     return `<div class="linked">
       <div class="linked__head">
         <span class="pill pill--low">${fmtInt(g.count)}</span>
         <span class="linked__cat">${escapeHtml(cat || '—')}</span>
+        ${g.llm_provider ? '<span class="pill pill--ghost" style="font-size:10px">AI</span>' : ''}
         <span class="linked__hpct">${fmtPct(g.high_pct)}</span>
       </div>
       <div class="linked__row">
@@ -1748,6 +1868,7 @@ function renderLinked(groups) {
         <span class="linked__label linked__label--act">${t('linked.response')}</span>
         <div class="linked__txt">${escapeHtml(g.employee_response || '')}</div>
       </div>
+      ${rationale}
       <div class="linked__examples">
         <div class="insight__examples-label">${t('linked.examples')}</div>
         <div class="insight__examples-list">${examplesHtml}</div>
@@ -1758,6 +1879,23 @@ function renderLinked(groups) {
     const id = parseInt(el.dataset.id, 10);
     if (id) openTicket(id);
   }));
+}
+
+async function refineLinkedWithLLM() {
+  const btn = qs('#btn-llm-refine');
+  if (!btn) return;
+  const original = btn.innerHTML;
+  btn.disabled = true;
+  btn.innerHTML = `<svg class="icon"><use href="#i-bulb"/></svg> ${t('linked.refining')}`;
+  try {
+    const data = await api('/api/related_groups?language=' + LANG + '&use_llm=true&min_size=5&top_n=6');
+    renderLinked(data);
+  } catch (e) {
+    console.error(e);
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = original;
+  }
 }
 
 function renderRecurring(rows) {
@@ -1799,7 +1937,10 @@ function renderAlerts(list) {
 async function loadActions() {
   const onlyHigh = qs('#actions-only-high input').checked;
   const q = buildQuery();
-  const r = await fetch(`/api/records?${q}&only_high=${onlyHigh}&page=1&page_size=50`);
+  const extra = new URLSearchParams();
+  (state.filters.statuses || []).forEach(s => extra.append('status', s));
+  (state.filters.assignees || []).forEach(a => extra.append('assignee', a));
+  const r = await fetch(`/api/records?${q}&${extra.toString()}&only_high=${onlyHigh}&page=1&page_size=50`);
   const data = await r.json();
   qs('#actions-meta').textContent = `${fmtInt(data.total)} · ${fmtInt(data.rows.length)}`;
   qs('#actions-tbody').innerHTML = data.rows.length ? data.rows.map(r => {
@@ -1811,7 +1952,7 @@ async function loadActions() {
       <td class="num">#${nm(r.request_id)}</td>
       <td>${escapeHtml(r.body || t('na'))}</td>
       <td>${escapeHtml(catDisplay(r.category))}</td>
-      <td><span class="pill ${sevClass}">${SEV_LABEL(r.severity)}</span></td>
+      <td><span class="pill ${sevClass}" title="${r.severity_overridden?'overridden':'AI'}">${SEV_LABEL(r.severity)}${r.severity_overridden?' ✎':''}</span></td>
       <td><span class="pill ${tColor}">${escapeHtml(statusLabel(tStatus))}${cmt}</span></td>
       <td>${escapeHtml(userLabel(r.ticket_assignee))}</td>
       <td class="num">${fmtDate(r.closed_at)}</td>

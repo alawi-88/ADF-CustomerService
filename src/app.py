@@ -122,6 +122,19 @@ def _filter_df(
     return out
 
 
+def _topic_en(df: pd.DataFrame, topic_ar: str) -> str:
+    """Look up the English label for an Arabic topic string from the dataset."""
+    if not topic_ar:
+        return ""
+    if "topic_label_ar" in df.columns and "topic_label_en" in df.columns:
+        m = df[df["topic_label_ar"] == topic_ar]
+        if not m.empty:
+            v = m["topic_label_en"].iloc[0]
+            if v:
+                return str(v)
+    return topic_ar
+
+
 def _params(
     date_from: Optional[date],
     date_to: Optional[date],
@@ -168,12 +181,15 @@ def health() -> dict:
 def meta() -> dict:
     """Metadata used by the frontend to populate filter widgets."""
     df = _load_data()
+    cats = sorted(df["category"].dropna().unique().tolist())
     return {
         "rows": int(len(df)),
         "date_min": str(df["closed_at"].min().date()),
         "date_max": str(df["closed_at"].max().date()),
-        "categories": sorted(df["category"].dropna().unique().tolist()),
-        "severities": analytics.SEVERITY_ORDER,
+        "categories": cats,
+        "categories_en": [llm_client.CATEGORY_EN.get(c, c) for c in cats],
+        "severities":   analytics.SEVERITY_ORDER,
+        "severities_en":[llm_client.SEVERITY_EN.get(s, s) for s in analytics.SEVERITY_ORDER],
     }
 
 
@@ -217,7 +233,12 @@ def categories(
 ) -> JSONResponse:
     fdf = _params(date_from, date_to, category, severity)
     s = fdf["category"].value_counts()
-    return JSONResponse([{"label": k, "count": int(v)} for k, v in s.items()])
+    return JSONResponse([
+        {"label": k,
+         "label_en": llm_client.CATEGORY_EN.get(k, k),
+         "count": int(v)}
+        for k, v in s.items()
+    ])
 
 
 @app.get("/api/severity")
@@ -263,7 +284,11 @@ def weekly_by_cat(
         fdf.groupby([fdf["week_start"], "category"]).size().unstack(fill_value=0).sort_index()
     )
     x = [d.strftime("%Y-%m-%d") for d in pivot.index]
-    series = [{"name": col, "y": [int(v) for v in pivot[col].values]} for col in pivot.columns]
+    series = [{
+        "name": col,
+        "name_en": llm_client.CATEGORY_EN.get(col, col),
+        "y": [int(v) for v in pivot[col].values],
+    } for col in pivot.columns]
     return JSONResponse({"x": x, "series": series})
 
 
@@ -277,7 +302,10 @@ def topics(
 ) -> JSONResponse:
     fdf = _params(date_from, date_to, category, severity)
     df = analytics.top_recurring_topics(fdf, top_n=top_n)
-    return JSONResponse(df.to_dict(orient="records"))
+    rows = df.to_dict(orient="records")
+    for r in rows:
+        r["topic_label_en"] = _topic_en(fdf, r.get("topic_label", ""))
+    return JSONResponse(rows)
 
 
 @app.get("/api/alerts")
@@ -315,12 +343,12 @@ def records(
     body_contains: Optional[str] = Query(None),
     week_start: Optional[str] = Query(None),
     only_high: bool = False,
+    assignee: Optional[list[str]] = Query(None),  # user_id list, "unassigned" allowed
+    status: Optional[list[str]] = Query(None),
     page: int = Query(1, ge=1),
     page_size: int = Query(25, ge=1, le=200),
 ) -> JSONResponse:
     fdf = _params(date_from, date_to, category, severity)
-    if only_high:
-        fdf = fdf[fdf["severity"] == "عالية"]
     if topic:
         fdf = fdf[fdf["topic_label"].isin(topic)]
     if body_contains:
@@ -329,7 +357,47 @@ def records(
         ws = pd.to_datetime(week_start, errors="coerce")
         if pd.notna(ws):
             fdf = fdf[fdf["week_start"] == ws]
-    fdf = fdf.sort_values("closed_at", ascending=False)
+
+    # Apply ticket-state filters (status / assignee / severity override).
+    # Severity needs special handling: the user might filter by the EFFECTIVE
+    # severity (override-or-AI), so we compute it before further filtering.
+    assignments = {rid: (asn, st, ov)
+                   for rid, asn, st, ov in tickets.all_assignments()}
+
+    def effective_severity(rid: int, ai_sev: str) -> str:
+        a = assignments.get(rid)
+        return (a[2] if a and a[2] else ai_sev) if a else ai_sev
+
+    fdf = fdf.copy()
+    if not fdf.empty:
+        fdf["effective_severity"] = [
+            effective_severity(int(rid), sev)
+            for rid, sev in zip(fdf["request_id"].tolist(), fdf["severity"].tolist())
+        ]
+    else:
+        fdf["effective_severity"] = []
+
+    if severity and not fdf.empty:
+        fdf = fdf[fdf["effective_severity"].isin(severity)]
+    if only_high and not fdf.empty:
+        fdf = fdf[fdf["effective_severity"] == "عالية"]
+    if assignee and not fdf.empty:
+        def match_assignee(rid: int) -> bool:
+            a = assignments.get(int(rid))
+            cur = a[0] if a else None
+            if "unassigned" in assignee and not cur:
+                return True
+            return cur in assignee
+        fdf = fdf[fdf["request_id"].apply(match_assignee)]
+    if status and not fdf.empty:
+        def match_status(rid: int) -> bool:
+            a = assignments.get(int(rid))
+            cur = a[1] if a else "open"
+            return cur in status
+        fdf = fdf[fdf["request_id"].apply(match_status)]
+
+    if not fdf.empty:
+        fdf = fdf.sort_values("closed_at", ascending=False)
     total = len(fdf)
     start = (page - 1) * page_size
     page_df = fdf.iloc[start:start + page_size]
@@ -339,6 +407,8 @@ def records(
     for _, r in page_df.iterrows():
         rid = int(r["request_id"])
         tm = ticket_meta.get(rid, {})
+        ai_sev = r["severity"]
+        override = tm.get("severity_override")
         rows.append({
             "request_id": rid,
             "category": r["category"],
@@ -346,7 +416,9 @@ def records(
             "body": r["body"],
             "topic_label_ar": r.get("topic_label_ar") or r.get("topic_label") or "",
             "topic_label_en": r.get("topic_label_en") or r.get("topic_label") or "",
-            "severity": r["severity"],
+            "severity_ai":  ai_sev,
+            "severity":     override or ai_sev,
+            "severity_overridden": bool(override),
             "severity_reason_ar": r.get("severity_reason_ar") or r.get("severity_reason") or "",
             "severity_reason_en": r.get("severity_reason_en") or r.get("severity_reason") or "",
             "recommended_action_ar": r.get("recommended_action_ar") or r.get("recommended_action") or "",
@@ -429,10 +501,14 @@ def category_matrix(
     fdf = _params(date_from, date_to, category, severity)
     pivot = analytics.category_severity_matrix(fdf)
     if pivot.empty:
-        return JSONResponse({"categories": [], "severities": [], "values": []})
+        return JSONResponse({"categories": [], "categories_en": [],
+                             "severities": [], "severities_en": [], "values": []})
+    cats = pivot["category"].tolist()
     return JSONResponse({
-        "categories": pivot["category"].tolist(),
-        "severities": analytics.SEVERITY_ORDER,
+        "categories":    cats,
+        "categories_en": [llm_client.CATEGORY_EN.get(c, c) for c in cats],
+        "severities":    analytics.SEVERITY_ORDER,
+        "severities_en": [llm_client.SEVERITY_EN.get(s, s) for s in analytics.SEVERITY_ORDER],
         "values": [[int(pivot[s].iloc[i]) for s in analytics.SEVERITY_ORDER]
                    for i in range(len(pivot))],
     })
@@ -447,7 +523,10 @@ def topic_momentum_endpoint(
 ) -> JSONResponse:
     fdf = _params(date_from, date_to, category, severity)
     df = analytics.topic_momentum(fdf, lookback_weeks=4, top_n=8)
-    return JSONResponse(df.to_dict(orient="records"))
+    rows = df.to_dict(orient="records")
+    for r in rows:
+        r["topic_label_en"] = _topic_en(fdf, r.get("topic_label", ""))
+    return JSONResponse(rows)
 
 
 # ---------- period comparison ----------
@@ -487,12 +566,17 @@ def related_groups(
     min_size: int = Query(5, ge=2, le=50),
     top_n: int = Query(8, ge=1, le=20),
     language: str = Query("ar"),
+    use_llm: bool = Query(False),
 ) -> JSONResponse:
     """Return semantically-linked complaint groups, each with the synthesised
-    'beneficiary intent' and a one-line employee response."""
+    'beneficiary intent' and a one-line employee response.
+
+    When use_llm=true and a provider is reachable, the LLM rewrites the intent
+    by reading the actual body samples in domain context.
+    """
     fdf = _params(date_from, date_to, category, severity)
     return JSONResponse(analytics.find_related_groups(
-        fdf, min_size=min_size, top_n=top_n, lang=language))
+        fdf, min_size=min_size, top_n=top_n, lang=language, use_llm=use_llm))
 
 
 @app.get("/api/recurring_cases")
@@ -670,3 +754,16 @@ def ticket_comment(request_id: int, body: CommentBody) -> dict:
 @app.get("/api/ticket_stats")
 def ticket_stats() -> dict:
     return tickets.stats()
+
+
+class SeverityBody(BaseModel):
+    severity: Optional[str] = None  # None to clear override
+    by_id: Optional[str] = None
+
+
+@app.post("/api/ticket/{request_id}/severity")
+def ticket_severity(request_id: int, body: SeverityBody) -> dict:
+    try:
+        return tickets.set_severity(request_id, body.severity, body.by_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))

@@ -59,6 +59,7 @@ def init_db() -> None:
                 status      TEXT NOT NULL DEFAULT 'open',
                 assignee_id TEXT,
                 priority    TEXT,
+                severity_override TEXT,
                 created_at  REAL NOT NULL,
                 updated_at  REAL NOT NULL
             );
@@ -92,11 +93,19 @@ def _ensure_ticket(c: sqlite3.Connection, request_id: int) -> sqlite3.Row:
         return row
     now = time.time()
     c.execute(
-        "INSERT INTO tickets(request_id, status, assignee_id, priority, created_at, updated_at) "
-        "VALUES (?, ?, NULL, NULL, ?, ?)",
+        "INSERT INTO tickets(request_id, status, assignee_id, priority, severity_override, created_at, updated_at) "
+        "VALUES (?, ?, NULL, NULL, NULL, ?, ?)",
         (request_id, DEFAULT_STATUS, now, now),
     )
     return c.execute("SELECT * FROM tickets WHERE request_id=?", (request_id,)).fetchone()
+
+
+# Light migration: add the column if the existing DB was created earlier.
+def _migrate() -> None:
+    with _conn() as c:
+        cols = {r[1] for r in c.execute("PRAGMA table_info(tickets)").fetchall()}
+        if "severity_override" not in cols:
+            c.execute("ALTER TABLE tickets ADD COLUMN severity_override TEXT")
 
 
 def get_ticket(request_id: int) -> dict:
@@ -111,37 +120,74 @@ def get_ticket(request_id: int) -> dict:
             (request_id,),
         ).fetchall()]
         return {
-            "request_id":  t["request_id"],
-            "status":      t["status"],
-            "assignee_id": t["assignee_id"],
-            "priority":    t["priority"],
-            "created_at":  t["created_at"],
-            "updated_at":  t["updated_at"],
-            "comments":    comments,
-            "history":     history,
+            "request_id":         t["request_id"],
+            "status":             t["status"],
+            "assignee_id":        t["assignee_id"],
+            "priority":           t["priority"],
+            "severity_override":  t["severity_override"] if "severity_override" in t.keys() else None,
+            "created_at":         t["created_at"],
+            "updated_at":         t["updated_at"],
+            "comments":           comments,
+            "history":            history,
         }
 
 
+def set_severity(request_id: int, severity: str | None, by_id: str | None) -> dict:
+    """Override the AI-derived severity. Pass None to clear and revert."""
+    if severity is not None and severity not in ("عالية", "متوسطة", "منخفضة"):
+        raise ValueError(f"Unknown severity: {severity}")
+    with _lock, _conn() as c:
+        _ensure_ticket(c, request_id)
+        now = time.time()
+        c.execute("UPDATE tickets SET severity_override=?, updated_at=? WHERE request_id=?",
+                  (severity, now, request_id))
+        # Audit as a comment
+        if severity:
+            c.execute("INSERT INTO comments(request_id, author_id, body, created_at) "
+                      "VALUES (?, ?, ?, ?)",
+                      (request_id, by_id or "system",
+                       f"تم تعديل مستوى الخطورة إلى «{severity}»", now))
+        else:
+            c.execute("INSERT INTO comments(request_id, author_id, body, created_at) "
+                      "VALUES (?, ?, ?, ?)",
+                      (request_id, by_id or "system",
+                       "تمت إعادة مستوى الخطورة إلى التصنيف الذكي", now))
+    return get_ticket(request_id)
+
+
 def get_tickets_summary(request_ids: list[int]) -> dict[int, dict]:
-    """Lightweight bulk fetch — just status + assignee + comment count."""
+    """Lightweight bulk fetch — status + assignee + override + comment count."""
     if not request_ids:
         return {}
     with _conn() as c:
         placeholders = ",".join("?" * len(request_ids))
         rows = c.execute(
-            f"SELECT request_id, status, assignee_id FROM tickets WHERE request_id IN ({placeholders})",
+            f"SELECT request_id, status, assignee_id, severity_override FROM tickets WHERE request_id IN ({placeholders})",
             request_ids,
         ).fetchall()
         ccounts = c.execute(
             f"SELECT request_id, COUNT(*) AS n FROM comments WHERE request_id IN ({placeholders}) GROUP BY request_id",
             request_ids,
         ).fetchall()
-        out = {r["request_id"]: {"status": r["status"], "assignee_id": r["assignee_id"], "comments": 0}
+        out = {r["request_id"]: {"status": r["status"],
+                                  "assignee_id": r["assignee_id"],
+                                  "severity_override": r["severity_override"],
+                                  "comments": 0}
                for r in rows}
         for r in ccounts:
             if r["request_id"] in out:
                 out[r["request_id"]]["comments"] = r["n"]
         return out
+
+
+def all_assignments() -> list[tuple[int, str | None, str, str | None]]:
+    """Return (request_id, assignee_id, status, severity_override) for every
+    ticket. Used by the records endpoint for fast filtering."""
+    with _conn() as c:
+        return [(r["request_id"], r["assignee_id"], r["status"], r["severity_override"])
+                for r in c.execute(
+                    "SELECT request_id, assignee_id, status, severity_override FROM tickets"
+                ).fetchall()]
 
 
 def set_status(request_id: int, status: str, by_id: str | None) -> dict:
@@ -206,3 +252,4 @@ def stats() -> dict:
 
 # Initialise on import — cheap, idempotent.
 init_db()
+_migrate()

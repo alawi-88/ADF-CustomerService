@@ -505,16 +505,21 @@ _INTENT_PATTERNS: list[tuple] = [
      "The beneficiary is unable to keep up with the repayment schedule and is asking for restructuring or partial relief.",
      "اقترح خطة سداد مرنة، اطلب من فريق التحصيل التواصل خلال 48 ساعة، ووثّق وضع المستفيد.",
      "Offer a flexible repayment plan, have collections call within 48 hours, and document the beneficiary's situation."),
-    (("ايقاف الحسم", "إيقاف الحسم", "ايقاف الخصم", "إيقاف الخصم", "وقف الخصم"),
-     "المستفيد يطلب إيقاف الخصم على قرضه بسبب ظرف مالي مؤقت أو خلاف على المبلغ.",
-     "The beneficiary wants the loan deduction halted due to a short-term financial issue or a dispute over the amount.",
+    (("ايقاف الحسم", "إيقاف الحسم", "ايقاف الخصم", "إيقاف الخصم", "وقف الخصم", "وقف الحسم"),
+     "المستفيد يطلب إيقاف الخصم الشهري على قرضه — إما بسبب ظرف مالي مؤقت أو خلاف على القسط.",
+     "The beneficiary wants the monthly loan-instalment deduction halted — either due to a short-term financial issue or a dispute over the instalment amount.",
      "تحقّق من حالة القرض، أوقف الخصم مؤقتاً إن كان نظامياً، وأعد التقييم خلال 7 أيام.",
      "Verify the loan status, pause the deduction temporarily if eligible, and reassess within 7 days."),
-    (("خصم خاطئ", "خصم زائد", "خصم بدون سبب", "تم الخصم", "خصم من مرتبي"),
-     "المستفيد يدّعي خصماً مالياً غير مبرّر من حسابه ويطلب التحقق والتسوية.",
-     "The beneficiary claims an unjustified deduction and is asking for verification and reconciliation.",
-     "راجع سجل الخصم خلال 24 ساعة، تواصل مع المستفيد بنتيجة التحقق، ونفّذ التسوية إن ثبت الخطأ.",
-     "Audit the deduction record within 24 hours, share the verification outcome, and reconcile if an error is confirmed."),
+    # Generic «خصم» → in our domain almost always means the bank-account
+    # deduction taken automatically to cover a loan instalment. We assume
+    # that context unless other patterns matched first.
+    (("خصم", "حسم"),
+     "المستفيد يستفسر/يعترض على عملية خصم تلقائي من حسابه البنكي مرتبطة بقسط القرض. "
+     "قد يكون السبب: خصم مكرر، خصم بمبلغ غير صحيح، خصم في توقيت غير متوقع، أو رغبة في إعادة جدولة الأقساط.",
+     "The beneficiary is asking about — or disputing — an automatic deduction from their bank account that is tied to a loan instalment. "
+     "Likely causes: duplicate deduction, incorrect amount, unexpected timing, or a desire to reschedule the instalments.",
+     "افحص سجل الخصم لهذا الحساب لآخر دورتين، قارن المبلغ بالقسط المتعاقد عليه، اتصل بالمستفيد لتأكيد ما يطلبه (مراجعة المبلغ / إيقاف الخصم / إعادة الجدولة) ووجّهه للجهة المناسبة.",
+     "Audit the last two deduction cycles on the account, compare the amount against the contracted instalment, call the beneficiary to confirm what they actually want (amount review / pause / rescheduling), and route them to the right unit."),
     (("تأخر", "متأخر", "لم يصل", "لم يُصرف", "بدون رد", "لم يتم", "ما تم"),
      "المستفيد ينتظر إجراءً أو صرفاً ماليّاً ولم يتم في الوقت المتوقع.",
      "The beneficiary is waiting on an action or disbursement that didn't happen on time.",
@@ -568,7 +573,8 @@ def _intent_for(text: str) -> tuple[str, str, str, str] | None:
 def find_related_groups(df: pd.DataFrame,
                         min_size: int = 5,
                         top_n: int = 6,
-                        lang: str = "ar") -> list[dict]:
+                        lang: str = "ar",
+                        use_llm: bool = True) -> list[dict]:
     """Cluster requests that share an underlying intent and synthesize, in
     the role of the customer-service employee, what the beneficiary likely
     wants.
@@ -627,7 +633,36 @@ def find_related_groups(df: pd.DataFrame,
         })
 
     groups.sort(key=lambda g: -g["count"])
-    return groups[:top_n]
+    groups = groups[:top_n]
+
+    if use_llm:
+        # Layer LLM enrichment for the top groups: pass the actual body
+        # samples to a model that already has the domain context embedded
+        # in its system prompt. The LLM synthesises the underlying intent
+        # the way an experienced service employee would interpret these
+        # complaints together — picking up that "خصم" implies bank-account
+        # loan-deduction context, even when the body text is one word.
+        from src import llm_client  # local import to avoid hard dependency
+        for g in groups:
+            samples = [e.get("body", "") for e in g.get("examples", [])][:6]
+            if not samples:
+                continue
+            llm_out = llm_client.enrich_group(
+                samples,
+                g.get("top_category") or "",
+                g.get("high_pct") or 0.0,
+                language=lang,
+            )
+            if llm_out and llm_out.get("intent"):
+                g["intent"] = llm_out["intent"]
+            if llm_out and llm_out.get("employee_response"):
+                g["employee_response"] = llm_out["employee_response"]
+            if llm_out and llm_out.get("rationale"):
+                g["rationale"] = llm_out["rationale"]
+            if llm_out and llm_out.get("provider"):
+                g["llm_provider"] = llm_out["provider"]
+
+    return groups
 
 
 def find_recurring_cases(df: pd.DataFrame,

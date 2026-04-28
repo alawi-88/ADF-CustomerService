@@ -620,6 +620,70 @@ def answer_question(question: str, context_summary: str,
     return {"answer": msg_en if language == "en" else msg_ar, "source": "rule"}
 
 
+# ---------- group-level intent synthesis ----------
+
+_GROUP_SYSTEM = (
+    "أنت موظف خدمة عملاء أول في مؤسسة تمويلية. تفهم منتجات المؤسسة كما هو "
+    "مذكور أدناه. عندك عدة طلبات من مستفيدين تشترك في موضوع واحد. مهمتك أن "
+    "تستنبط ما يطلبه المستفيدون فعلاً (وليس النص الحرفي) وأن تحدّد أفضل "
+    "إجراء عملي لموظف خدمة العملاء. ردّ بصيغة JSON صالحة فقط.\n\n"
+    + _DOMAIN_CONTEXT
+)
+
+_GROUP_PROMPT_TMPL = """فيما يلي عيّنة من {n} طلب وردت إلى مركز خدمة العملاء، وكلها تشترك في موضوع واحد:
+
+{samples}
+
+سياق إضافي:
+- الفئة الغالبة: {top_category}
+- نسبة الخطورة العالية في الموضوع: {high_pct}%
+- لغة الإجابة المطلوبة: {language_label}
+
+اشرح بدقة ما يطلبه المستفيدون فعلاً (وليس الحرفي)، ثم أعطِ إجراءً واحداً عملياً قابلاً للتنفيذ من قِبل موظف خدمة العملاء.
+
+أعد JSON فقط بالحقول التالية:
+{{
+  "intent": "ما يطلبه المستفيد فعلاً، جملة واحدة كاملة في سياق المؤسسة التمويلية.",
+  "employee_response": "إجراء واحد ومحدّد للموظف. اذكر الجهة المختصة وSLA إن أمكن.",
+  "rationale": "سبب موجز يربط بين النصوص أعلاه وما استنبطته."
+}}"""
+
+
+def enrich_group(samples: list[str], top_category: str, high_pct: float,
+                 language: str = "ar") -> dict | None:
+    """Ask the LLM to interpret a cluster of related complaints in domain
+    context. Returns None if no LLM is reachable or parsing failed."""
+    if not (groq_available() or ollama_available()):
+        return None
+    if not samples:
+        return None
+    sample_block = "\n".join(f"- {s}" for s in samples[:8])
+    lang_label = "العربية" if language == "ar" else "English"
+    try:
+        raw, provider = _llm_generate(
+            _GROUP_PROMPT_TMPL.format(
+                n=len(samples), samples=sample_block,
+                top_category=top_category or "—",
+                high_pct=int(high_pct),
+                language_label=lang_label,
+            ),
+            system=_GROUP_SYSTEM,
+            temperature=0.2,
+        )
+        parsed = _try_parse_json(raw)
+        if not parsed:
+            return None
+        return {
+            "intent":            str(parsed.get("intent") or "").strip(),
+            "employee_response": str(parsed.get("employee_response") or "").strip(),
+            "rationale":         str(parsed.get("rationale") or "").strip(),
+            "provider":          provider,
+        }
+    except Exception as exc:
+        logger.warning("group enrich failed: %s", exc)
+        return None
+
+
 # ---------- corpus-level actionable insights ----------
 
 _INSIGHTS_SYSTEM = (
