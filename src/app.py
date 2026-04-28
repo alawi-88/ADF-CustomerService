@@ -286,10 +286,11 @@ def alerts(
     date_to: Optional[date] = Query(None, alias="to"),
     category: Optional[list[str]] = Query(None),
     severity: Optional[list[str]] = Query(None),
+    language: str = Query("ar"),
 ) -> JSONResponse:
     fdf = _params(date_from, date_to, category, severity)
     out = []
-    for a in analytics.detect_weekly_anomalies(fdf):
+    for a in analytics.detect_weekly_anomalies(fdf, lang=language):
         out.append({
             "week_start": a.week_start.strftime("%Y-%m-%d"),
             "dimension": a.dimension,
@@ -341,11 +342,15 @@ def records(
         rows.append({
             "request_id": rid,
             "category": r["category"],
+            "category_en": llm_client.CATEGORY_EN.get(r["category"], r["category"]),
             "body": r["body"],
-            "topic_label": r["topic_label"],
+            "topic_label_ar": r.get("topic_label_ar") or r.get("topic_label") or "",
+            "topic_label_en": r.get("topic_label_en") or r.get("topic_label") or "",
             "severity": r["severity"],
-            "severity_reason": r.get("severity_reason") or "",
-            "recommended_action": r["recommended_action"],
+            "severity_reason_ar": r.get("severity_reason_ar") or r.get("severity_reason") or "",
+            "severity_reason_en": r.get("severity_reason_en") or r.get("severity_reason") or "",
+            "recommended_action_ar": r.get("recommended_action_ar") or r.get("recommended_action") or "",
+            "recommended_action_en": r.get("recommended_action_en") or r.get("recommended_action") or "",
             "closed_at": pd.Timestamp(r["closed_at"]).strftime("%Y-%m-%d %H:%M"),
             "ticket_status":   tm.get("status", "open"),
             "ticket_assignee": tm.get("assignee_id"),
@@ -386,17 +391,12 @@ def insights(
     date_to: Optional[date] = Query(None, alias="to"),
     category: Optional[list[str]] = Query(None),
     severity: Optional[list[str]] = Query(None),
+    language: str = Query("ar"),
 ) -> JSONResponse:
-    """Return concrete actionable insights for the filtered slice.
-
-    Always uses the deterministic engine (which produces structured output
-    with kind, examples, and measurable metrics — no LLM round-trip needed).
-    The /api/qa endpoint remains the LLM-driven free-form path.
-    """
     fdf = _params(date_from, date_to, category, severity)
     if fdf.empty:
         return JSONResponse({"insights": [], "source": "empty"})
-    items = analytics.rule_based_insights(fdf)
+    items = analytics.rule_based_insights(fdf, lang=language)
     return JSONResponse({"insights": items, "source": "engine"})
 
 
@@ -476,6 +476,23 @@ def forecast(
 ) -> JSONResponse:
     fdf = _params(date_from, date_to, category, severity)
     return JSONResponse(analytics.forecast_weekly(fdf, horizon=horizon, by_category=True))
+
+
+@app.get("/api/related_groups")
+def related_groups(
+    date_from: Optional[date] = Query(None, alias="from"),
+    date_to: Optional[date] = Query(None, alias="to"),
+    category: Optional[list[str]] = Query(None),
+    severity: Optional[list[str]] = Query(None),
+    min_size: int = Query(5, ge=2, le=50),
+    top_n: int = Query(8, ge=1, le=20),
+    language: str = Query("ar"),
+) -> JSONResponse:
+    """Return semantically-linked complaint groups, each with the synthesised
+    'beneficiary intent' and a one-line employee response."""
+    fdf = _params(date_from, date_to, category, severity)
+    return JSONResponse(analytics.find_related_groups(
+        fdf, min_size=min_size, top_n=top_n, lang=language))
 
 
 @app.get("/api/recurring_cases")
@@ -597,11 +614,15 @@ def get_ticket(request_id: int) -> dict:
     record = {
         "request_id": int(r["request_id"]),
         "category": r["category"],
+        "category_en": llm_client.CATEGORY_EN.get(r["category"], r["category"]),
         "body": r["body"],
-        "topic_label": r["topic_label"],
+        "topic_label_ar": r.get("topic_label_ar") or r.get("topic_label") or "",
+        "topic_label_en": r.get("topic_label_en") or r.get("topic_label") or "",
         "severity": r["severity"],
-        "severity_reason": r.get("severity_reason") or "",
-        "recommended_action": r["recommended_action"],
+        "severity_reason_ar": r.get("severity_reason_ar") or r.get("severity_reason") or "",
+        "severity_reason_en": r.get("severity_reason_en") or r.get("severity_reason") or "",
+        "recommended_action_ar": r.get("recommended_action_ar") or r.get("recommended_action") or "",
+        "recommended_action_en": r.get("recommended_action_en") or r.get("recommended_action") or "",
         "closed_at": pd.Timestamp(r["closed_at"]).strftime("%Y-%m-%d %H:%M"),
     }
     return {"record": record, "ticket": tickets.get_ticket(request_id)}

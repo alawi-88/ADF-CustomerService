@@ -164,6 +164,7 @@ def detect_weekly_anomalies(
     z_threshold: float = 1.3,
     min_count: int = 5,
     scan_recent_weeks: int = 4,
+    lang: str = "ar",
 ) -> list[AnomalyAlert]:
     """Detect anomalies across the recent weeks (not just the latest, which is
     often incomplete). Catches spikes AND sustained elevations.
@@ -238,7 +239,7 @@ def detect_weekly_anomalies(
                         baseline_mean=mu, baseline_std=sd,
                         z_score=float(z),
                         severity=sev,
-                        suggested_action=_action_for_anomaly(dim, value, count, mu, sev),
+                        suggested_action=_action_for_anomaly(dim, value, count, mu, sev, lang),
                     ))
                 continue
 
@@ -259,9 +260,12 @@ def detect_weekly_anomalies(
                                 z_score=1.0,
                                 severity="متوسطة",
                                 suggested_action=(
-                                    f"ارتفاع متواصل في «{value}» على مدى أسابيع عدة "
-                                    "(مستوى أعلى من المتوسط بـ 25٪ أو أكثر). "
-                                    + _action_for_anomaly(dim, value, count, mu, "متوسطة")
+                                    (f"ارتفاع متواصل في «{value}» على مدى أسابيع عدة "
+                                     "(مستوى أعلى من المتوسط بـ 25٪ أو أكثر). "
+                                     if lang != "en" else
+                                     f"Sustained elevation in «{value}» over multiple weeks "
+                                     "(25% or more above the mean). ")
+                                    + _action_for_anomaly(dim, value, count, mu, "متوسطة", lang)
                                 ),
                             ))
 
@@ -285,6 +289,9 @@ def detect_weekly_anomalies(
                 suggested_action=(
                     f"موضوع جديد ظهر مؤخراً «{topic}» بحجم {int(count)} طلب — "
                     "يستحق فهم سببه قبل أن يتوسّع."
+                    if lang != "en" else
+                    f"A new topic «{topic}» emerged recently with {int(count)} requests — "
+                    "investigate the cause before it scales."
                 ),
             ))
 
@@ -314,6 +321,10 @@ def detect_weekly_anomalies(
                     f"بؤرة خطورة عالية: «{cat}» تسجل {row['high_pct']:.0f}٪ "
                     f"من طلباتها بخطورة عالية (مقابل متوسط {avg_high_pct:.0f}٪ "
                     "في كامل البيانات). مراجعة جذور هذه الفئة وإطلاق إصلاحات سريعة."
+                    if lang != "en" else
+                    f"High-severity hotspot: «{cat}» logs {row['high_pct']:.0f}% "
+                    f"of its requests as high severity (vs an average of {avg_high_pct:.0f}% "
+                    "across all data). Review the category's root causes and ship fast fixes."
                 ),
             ))
         # topic hotspots (high-volume + high-severity)
@@ -333,6 +344,11 @@ def detect_weekly_anomalies(
                         f"{row['high_pct']:.0f}٪ من {int(row['count'])} طلب "
                         "بخطورة عالية. مراجعة سياسة الاستجابة لهذا الموضوع "
                         "وتفعيل قناة سريعة لمعالجته."
+                        if lang != "en" else
+                        f"Severity is concentrated in «{row['topic_label']}» — "
+                        f"{row['high_pct']:.0f}% of its {int(row['count'])} requests "
+                        "are high severity. Review the response policy for this topic "
+                        "and enable a fast-track channel for it."
                     ),
                 ))
         alerts.sort(key=lambda a: -a.count)
@@ -341,28 +357,32 @@ def detect_weekly_anomalies(
 
 
 def _action_for_anomaly(dim: str, value: str, count: int,
-                         baseline: float, severity: str) -> str:
+                         baseline: float, severity: str, lang: str = "ar") -> str:
     delta = count - baseline
+    if lang == "en":
+        if dim == "category":
+            if value == "شكوى":
+                return (f"Unusual rise in complaints this week (+{delta:.0f} above the mean). "
+                        "Review root causes and launch a proactive outreach campaign.")
+            if value == "دعم فني":
+                return (f"Tech-support volume is climbing (+{delta:.0f}). "
+                        "Audit digital-service availability and channel health.")
+            return (f"Unusual rise in category «{value}» (+{delta:.0f}). "
+                    "Review the category and run a root-cause analysis.")
+        return (f"Unusual rise in topic «{value}» (+{delta:.0f} above the mean). "
+                "Recommend a proactive improvement to the related service and a knowledge-base update.")
+    # AR (default)
     if dim == "category":
         if value == "شكوى":
-            return (
-                f"ارتفاع غير معتاد في الشكاوى هذا الأسبوع (+{delta:.0f} "
-                f"عن المعدل). يُوصى بمراجعة جذور الشكاوى وإطلاق حملة تواصل استباقي."
-            )
+            return (f"ارتفاع غير معتاد في الشكاوى هذا الأسبوع (+{delta:.0f} "
+                    f"عن المعدل). يُوصى بمراجعة جذور الشكاوى وإطلاق حملة تواصل استباقي.")
         if value == "دعم فني":
-            return (
-                f"تصاعد طلبات الدعم الفني (+{delta:.0f}). يُوصى بفحص توافر "
-                f"الخدمات الرقمية وحالة القنوات الإلكترونية."
-            )
-        return (
-            f"ارتفاع غير معتاد في فئة «{value}» (+{delta:.0f}). "
-            f"يُوصى بمراجعة محتوى الفئة وإجراء تحليل الأسباب الجذرية."
-        )
-    # topic dim
-    return (
-        f"ارتفاع غير معتاد في موضوع «{value}» (+{delta:.0f} عن المعدل). "
-        f"يُقترح تحسين استباقي على الخدمة المرتبطة وتحديث قاعدة المعرفة."
-    )
+            return (f"تصاعد طلبات الدعم الفني (+{delta:.0f}). يُوصى بفحص توافر "
+                    f"الخدمات الرقمية وحالة القنوات الإلكترونية.")
+        return (f"ارتفاع غير معتاد في فئة «{value}» (+{delta:.0f}). "
+                f"يُوصى بمراجعة محتوى الفئة وإجراء تحليل الأسباب الجذرية.")
+    return (f"ارتفاع غير معتاد في موضوع «{value}» (+{delta:.0f} عن المعدل). "
+            f"يُقترح تحسين استباقي على الخدمة المرتبطة وتحديث قاعدة المعرفة.")
 
 
 # ---------- Free-text context summary (for the Q&A page) ----------
@@ -470,6 +490,144 @@ def _normalize_for_dedup(text: str) -> str:
     # collapse whitespace and strip diacritics-like punctuation
     s = " ".join(s.split())
     return s
+
+
+# ---------- Semantic linking — group related complaints by meaning, then
+#            synthesise what an employee should understand the beneficiary
+#            actually wants. Probably the highest-value piece of reasoning
+#            in the product: takes raw beneficiary text and gives the
+#            ticket-handler a clear intent statement they can act on.
+
+# Each entry: keyword set → (intent_ar, intent_en, suggested_response_ar, suggested_response_en)
+_INTENT_PATTERNS: list[tuple] = [
+    (("متعسر", "متعثر", "تعسر", "تعثر", "غير قادر", "ما اقدر", "صعوبة في السداد"),
+     "المستفيد يواجه صعوبة في الالتزام بجدول السداد ويطلب إعادة جدولة أو إعفاء جزئي.",
+     "The beneficiary is unable to keep up with the repayment schedule and is asking for restructuring or partial relief.",
+     "اقترح خطة سداد مرنة، اطلب من فريق التحصيل التواصل خلال 48 ساعة، ووثّق وضع المستفيد.",
+     "Offer a flexible repayment plan, have collections call within 48 hours, and document the beneficiary's situation."),
+    (("ايقاف الحسم", "إيقاف الحسم", "ايقاف الخصم", "إيقاف الخصم", "وقف الخصم"),
+     "المستفيد يطلب إيقاف الخصم على قرضه بسبب ظرف مالي مؤقت أو خلاف على المبلغ.",
+     "The beneficiary wants the loan deduction halted due to a short-term financial issue or a dispute over the amount.",
+     "تحقّق من حالة القرض، أوقف الخصم مؤقتاً إن كان نظامياً، وأعد التقييم خلال 7 أيام.",
+     "Verify the loan status, pause the deduction temporarily if eligible, and reassess within 7 days."),
+    (("خصم خاطئ", "خصم زائد", "خصم بدون سبب", "تم الخصم", "خصم من مرتبي"),
+     "المستفيد يدّعي خصماً مالياً غير مبرّر من حسابه ويطلب التحقق والتسوية.",
+     "The beneficiary claims an unjustified deduction and is asking for verification and reconciliation.",
+     "راجع سجل الخصم خلال 24 ساعة، تواصل مع المستفيد بنتيجة التحقق، ونفّذ التسوية إن ثبت الخطأ.",
+     "Audit the deduction record within 24 hours, share the verification outcome, and reconcile if an error is confirmed."),
+    (("تأخر", "متأخر", "لم يصل", "لم يُصرف", "بدون رد", "لم يتم", "ما تم"),
+     "المستفيد ينتظر إجراءً أو صرفاً ماليّاً ولم يتم في الوقت المتوقع.",
+     "The beneficiary is waiting on an action or disbursement that didn't happen on time.",
+     "تتبّع الطلب لدى الجهة المختصة، اتصل بالمستفيد خلال 24 ساعة بحالة التحديث، وحدّد سبب التأخير.",
+     "Trace the request through the responsible unit, call the beneficiary within 24 hours with a status update, and identify the cause of the delay."),
+    (("الغاء عقد", "إلغاء عقد", "الغاء قرض", "إلغاء قرض", "فسخ"),
+     "المستفيد يطلب إلغاء/فسخ عقد قائم — قرار مالي حساس يستوجب مراجعة شروط العقد.",
+     "The beneficiary is requesting cancellation of an existing contract — a sensitive financial decision that requires reviewing the contract terms.",
+     "حوّل إلى الجهة القانونية وفريق الائتمان، راجع شروط الفسخ، وأبلغ المستفيد بالإجراء والمدة المتوقعة.",
+     "Refer to legal and credit, review the cancellation terms, and inform the beneficiary of the procedure and expected timeline."),
+    (("تحديث رقم", "تحديث جوال", "تحديث بيانات", "تغيير رقم"),
+     "المستفيد يطلب تحديث بيانات الاتصال — إجراء روتيني لكنه يلزم لإكمال الخدمات.",
+     "The beneficiary wants to update contact details — routine, but required to complete services.",
+     "وفّر مسار التحديث الذاتي على البوابة، وتأكّد من تحديث القنوات المرتبطة بعد التحقق.",
+     "Offer the self-service update flow on the portal and ensure linked channels reflect the change after verification."),
+    (("القروض العادية", "القروض المتخصصة", "نوع القرض", "اي نوع", "ايش الفرق"),
+     "المستفيد يستفسر عن نوع/فئة القرض المناسبة لوضعه ولم يحسم اختياره.",
+     "The beneficiary is asking which loan product fits their situation and hasn't decided.",
+     "أرسل ملخّصاً للأنواع المتاحة وأهليّة كلٍّ منها، واعرض موعداً مع مستشار ائتماني.",
+     "Send a summary of available products and eligibility for each, and offer an appointment with a credit advisor."),
+    (("اخلاء طرف", "إخلاء طرف"),
+     "المستفيد يطلب وثيقة إخلاء طرف بعد إغلاق التزاماته.",
+     "The beneficiary is asking for a clearance certificate after closing their obligations.",
+     "تحقّق من إغلاق جميع المستحقات، وأصدر الوثيقة إلكترونياً مع روابط التحميل.",
+     "Verify all obligations are closed and issue the certificate electronically with download links."),
+    (("شكر", "تقدير", "ممتاز"),
+     "المستفيد يعبّر عن رضاه — لا حاجة لإجراء تصحيحي.",
+     "The beneficiary is expressing satisfaction — no corrective action needed.",
+     "أرسل رسالة تقدير قصيرة وأرشف التعليق في سجل التجربة الإيجابية.",
+     "Send a short thank-you and archive the comment in the positive-experience log."),
+    (("احتيال", "تزوير", "تلاعب", "اخترق"),
+     "المستفيد يبلّغ عن احتيال أو تلاعب يحتاج إجراءات أمنية فورية.",
+     "The beneficiary is reporting fraud or tampering that requires immediate security action.",
+     "صعّد فوراً لإدارة المخاطر، جمّد الحساب وقفل المعاملات حتى التحقق.",
+     "Escalate immediately to risk and compliance; freeze the account and any pending transactions until verified."),
+]
+
+
+def _intent_for(text: str) -> tuple[str, str, str, str] | None:
+    """Match a (possibly long) request body against the intent patterns."""
+    if not text:
+        return None
+    t = text
+    for keys, intent_ar, intent_en, resp_ar, resp_en in _INTENT_PATTERNS:
+        for k in keys:
+            if k in t:
+                return intent_ar, intent_en, resp_ar, resp_en
+    return None
+
+
+def find_related_groups(df: pd.DataFrame,
+                        min_size: int = 5,
+                        top_n: int = 6,
+                        lang: str = "ar") -> list[dict]:
+    """Cluster requests that share an underlying intent and synthesize, in
+    the role of the customer-service employee, what the beneficiary likely
+    wants.
+
+    Approach: walk through known intent patterns; for each pattern that
+    matches at least `min_size` records, build a group with:
+      - intent           : "what the beneficiary really wants" (one sentence)
+      - employee_response: how an employee should handle it (one sentence)
+      - examples         : up to 4 representative IDs+body excerpts
+      - count            : how many records share this intent
+      - top_category     : dominant category in the group
+      - high_pct         : share that are high severity
+    """
+    if df.empty or "body" not in df.columns:
+        return []
+
+    groups: list[dict] = []
+    used_ids: set[int] = set()
+
+    for keys, intent_ar, intent_en, resp_ar, resp_en in _INTENT_PATTERNS:
+        # Members are records whose body contains any of the keywords AND
+        # whose request_id hasn't already been claimed by an earlier intent.
+        mask = pd.Series(False, index=df.index)
+        for k in keys:
+            mask = mask | df["body"].astype(str).str.contains(k, regex=False, na=False)
+        members = df[mask]
+        members = members[~members["request_id"].astype(int).isin(used_ids)]
+        if len(members) < min_size:
+            continue
+        for rid in members["request_id"].astype(int):
+            used_ids.add(int(rid))
+
+        ex_rows = members.sort_values("closed_at", ascending=False).head(4)
+        examples = []
+        for _, r in ex_rows.iterrows():
+            body = str(r.get("body") or "").strip()
+            if len(body) > 70:
+                body = body[:70].rstrip() + "…"
+            examples.append({"id": int(r["request_id"]), "body": body})
+
+        top_cat = members["category"].mode().iloc[0] if not members["category"].mode().empty else None
+        high_pct = round((members["severity"] == "عالية").mean() * 100.0, 1)
+
+        groups.append({
+            "intent":            intent_en if lang == "en" else intent_ar,
+            "employee_response": resp_en   if lang == "en" else resp_ar,
+            "match_keywords":    list(keys),
+            "count":             int(len(members)),
+            "top_category":      top_cat,
+            "top_category_en":   None if not top_cat else (
+                {"شكوى":"Complaint","استفسار":"Inquiry","اقتراح":"Suggestion",
+                 "دعم فني":"Tech support","خدمة مراجع":"Reviewer service"}.get(top_cat, top_cat)
+            ),
+            "high_pct":          high_pct,
+            "examples":          examples,
+        })
+
+    groups.sort(key=lambda g: -g["count"])
+    return groups[:top_n]
 
 
 def find_recurring_cases(df: pd.DataFrame,
@@ -583,7 +741,7 @@ def build_signals_text(df: pd.DataFrame) -> str:
     k = compute_kpis(df)
     top_topics = top_recurring_topics(df, top_n=6)
     momentum = topic_momentum(df)
-    alerts = detect_weekly_anomalies(df)
+    alerts = detect_weekly_anomalies(df, lang=lang)
     lines = [
         f"إجمالي السجلات: {k.total} · شكاوى {k.pct_complaints:.0f}٪ · "
         f"خطورة عالية {k.pct_high_severity:.0f}٪",
@@ -619,46 +777,77 @@ def build_signals_text(df: pd.DataFrame) -> str:
     return "\n".join(lines)
 
 
-def _topic_action_map(topic: str) -> tuple[str, str]:
-    """(responsible_unit, action) mapping per topic for financial-services CX."""
+_UNIT_AR = {
+    "collections": "فريق التحصيل وإدارة الائتمان",
+    "risk":        "إدارة المخاطر والامتثال",
+    "ops":         "إدارة العمليات المالية",
+    "credit":      "إدارة الائتمان",
+    "subsidies":   "إدارة برامج الدعم",
+    "digital":     "التحول الرقمي",
+    "support":     "إدارة التحول الرقمي والدعم الفني",
+    "reviewers":   "مكتب خدمة المراجعين",
+    "cx":          "إدارة تجربة المستفيد",
+    "default":     "الجهة المختصة بالموضوع",
+}
+_UNIT_EN = {
+    "collections": "Collections & credit team",
+    "risk":        "Risk & compliance",
+    "ops":         "Financial operations",
+    "credit":      "Credit team",
+    "subsidies":   "Subsidy programs",
+    "digital":     "Digital transformation",
+    "support":     "Digital channels & tech support",
+    "reviewers":   "Reviewer-service desk",
+    "cx":          "Customer-experience team",
+    "default":     "Responsible unit for this topic",
+}
+_ACTION_BODY_AR = {
+    "collections": "مراجعة محفظة المتأثرين وتفعيل خطط جدولة سداد مرنة، والتواصل الاستباقي بمستشار مالي مخصّص.",
+    "risk":        "تفعيل بروتوكول الكشف عن الاحتيال على المعاملات المرتبطة وإيقاف أي عمليات معلّقة لحين التحقق.",
+    "ops":         "مراجعة سجل الخصم لكل طلب، وإجراء التسويات في الحالات الموثّقة خلال 48 ساعة.",
+    "credit":      "مراجعة سياسة الاستجابة لطلبات التمويل، وتقصير دورة الاعتماد للحالات الواضحة.",
+    "subsidies":   "تحديث مرجعية المعايير على البوابة، وإطلاق دفعة تواصل استباقية للمستفيدين المؤهلين.",
+    "digital":     "تفعيل خدمة التحديث الذاتي عبر القناة الرقمية لخفض الطلبات اليدوية.",
+    "support":     "مراجعة لوحة توافر الخدمات الرقمية وتحسين رحلة المستخدم في المسارات الأكثر إثارة للطلبات.",
+    "reviewers":   "مراجعة قائمة المتطلبات الناقصة الأكثر تكراراً وتبسيط النموذج.",
+    "cx":          "تشكيل فريق سريع لتحليل أسباب الشكاوى المتكررة هذا الأسبوع وإطلاق إصلاحات قصيرة المدى.",
+    "default":     "إحالة المسار إلى الجهة المعنية مع SLA لا يتجاوز 3 أيام عمل.",
+}
+_ACTION_BODY_EN = {
+    "collections": "Review the affected portfolio, activate flexible repayment plans, and proactively contact each beneficiary with a dedicated financial advisor.",
+    "risk":        "Trigger the fraud-detection protocol on related transactions and freeze any pending operations until verified.",
+    "ops":         "Audit the deduction record for each request and reconcile documented errors within 48 hours.",
+    "credit":      "Revisit the financing-request response policy and shorten the approval cycle for clear-cut cases.",
+    "subsidies":   "Refresh the eligibility-criteria reference on the portal and launch a proactive outreach push to qualified beneficiaries.",
+    "digital":     "Activate a self-service data-update flow on the digital channel to deflect manual requests.",
+    "support":     "Audit the digital-services availability board and improve the user journey on the highest-volume paths.",
+    "reviewers":   "Review the most-frequent missing-requirement list and simplify the form.",
+    "cx":          "Stand up a quick task force to analyse recurring complaint root causes this week and ship short-term fixes.",
+    "default":     "Route the stream to the responsible unit with an SLA of no more than 3 business days.",
+}
+
+
+def _topic_unit_key(topic: str) -> str:
     t = (topic or "")
-    if "تعثّر" in t or "تعثر" in t or "السداد" in t:
-        return ("فريق التحصيل وإدارة الائتمان",
-                "مراجعة محفظة المتأثرين وتفعيل خطط جدولة سداد مرنة، "
-                "والتواصل الاستباقي بمستشار مالي مخصّص.")
-    if "احتيال" in t:
-        return ("إدارة المخاطر والامتثال",
-                "تفعيل بروتوكول الكشف عن الاحتيال على المعاملات المرتبطة "
-                "وإيقاف أي عمليات معلّقة لحين التحقق.")
-    if "خصم" in t:
-        return ("إدارة العمليات المالية",
-                "مراجعة سجل الخصم لكل طلب، وإجراء التسويات في الحالات "
-                "الموثّقة خلال 48 ساعة.")
-    if "قرض" in t or "تمويل" in t:
-        return ("إدارة الائتمان",
-                "مراجعة سياسة الاستجابة لطلبات التمويل، وتقصير دورة الاعتماد "
-                "للحالات الواضحة.")
-    if "دعم" in t:
-        return ("إدارة برامج الدعم",
-                "تحديث مرجعية المعايير على البوابة، وإطلاق دفعة تواصل "
-                "استباقية للمستفيدين المؤهلين.")
-    if "تحديث" in t and "بيانات" in t:
-        return ("التحول الرقمي",
-                "تفعيل خدمة التحديث الذاتي عبر القناة الرقمية لخفض "
-                "الطلبات اليدوية.")
-    if "قنوات" in t or "الدعم الفني" in t:
-        return ("إدارة التحول الرقمي والدعم الفني",
-                "مراجعة لوحة توافر الخدمات الرقمية وتحسين رحلة المستخدم "
-                "في المسارات الأكثر إثارة للطلبات.")
-    if "خدمة" in t and "مراجع" in t:
-        return ("مكتب خدمة المراجعين",
-                "مراجعة قائمة المتطلبات الناقصة الأكثر تكراراً وتبسيط النموذج.")
-    if "شكاو" in t:
-        return ("إدارة تجربة المستفيد",
-                "تشكيل فريق سريع لتحليل أسباب الشكاوى المتكررة هذا الأسبوع "
-                "وإطلاق إصلاحات قصيرة المدى.")
-    return ("الجهة المختصة بالموضوع",
-            "إحالة المسار إلى الجهة المعنية مع SLA لا يتجاوز 3 أيام عمل.")
+    if "تعثّر" in t or "تعثر" in t or "السداد" in t or "default" in t.lower() or "repayment" in t.lower(): return "collections"
+    if "احتيال" in t or "fraud" in t.lower(): return "risk"
+    if "خصم" in t or "deduction" in t.lower(): return "ops"
+    if "قرض" in t or "تمويل" in t or "loan" in t.lower() or "financ" in t.lower(): return "credit"
+    if "دعم" in t or "subsid" in t.lower() or "support program" in t.lower(): return "subsidies"
+    if "تحديث" in t and "بيانات" in t: return "digital"
+    if "data update" in t.lower(): return "digital"
+    if "قنوات" in t or "الدعم الفني" in t or "tech support" in t.lower() or "channels" in t.lower(): return "support"
+    if "خدمة" in t and "مراجع" in t: return "reviewers"
+    if "reviewer" in t.lower(): return "reviewers"
+    if "شكاو" in t or "complaint" in t.lower(): return "cx"
+    return "default"
+
+
+def _topic_action_map(topic: str, lang: str = "ar") -> tuple[str, str]:
+    key = _topic_unit_key(topic)
+    if lang == "en":
+        return _UNIT_EN[key], _ACTION_BODY_EN[key]
+    return _UNIT_AR[key], _ACTION_BODY_AR[key]
 
 
 def _examples_for(df: pd.DataFrame, n: int = 3, **filters) -> list[dict]:
@@ -681,19 +870,41 @@ def _examples_for(df: pd.DataFrame, n: int = 3, **filters) -> list[dict]:
     return out
 
 
-def _attribute_causes(df: pd.DataFrame, *, category: str | None = None,
-                      topic: str | None = None) -> list[dict]:
-    """Decompose 'why is this X concentrated/elevated?' into ranked causes.
+_CAUSE_TXT = {
+    "ar": {
+        "dup_cause":  "تكرار النص ذاته «{p}»",
+        "dup_ev":     "{n} طلب من أصل {m} يحملون النص نفسه — يرجّح أن المصدر مستفيد متكرر أو مشكلة منهجية واحدة.",
+        "topic_cause":"تركّز في موضوع «{t}»",
+        "topic_ev":   "{n} طلب ({p}٪ من الشريحة) ينتمون لموضوع واحد — يرجّح أن المصدر مشكلة محدّدة في هذا المسار.",
+        "cat_cause":  "كل الطلبات تقريباً في فئة «{c}»",
+        "cat_ev":     "{p}٪ من الشريحة من فئة واحدة — التحدي تشغيلي في فريق هذه الفئة وليس عاماً.",
+        "kw_cause":   "إشارات حساسة في النص (مثل «{k}»)",
+        "kw_ev":      "كلمة «{k}» وردت {n} مرة في الشريحة — تشير إلى مشكلة مالية/تشغيلية تستدعي التصعيد.",
+        "day_cause":  "تركّز يومي ({d})",
+        "day_ev":     "{p}٪ من الشريحة سُجّلت في يوم واحد — يرجّح أن سبب الموجة حدث محدّد بذلك اليوم.",
+    },
+    "en": {
+        "dup_cause":  "The same text is repeated «{p}»",
+        "dup_ev":     "{n} of {m} requests carry identical text — likely a single repeat beneficiary or a systemic issue.",
+        "topic_cause":"Concentration in topic «{t}»",
+        "topic_ev":   "{n} requests ({p}% of the slice) belong to a single topic — likely a specific issue in that flow.",
+        "cat_cause":  "Almost all requests are in category «{c}»",
+        "cat_ev":     "{p}% of the slice come from one category — operational challenge for that team, not a general issue.",
+        "kw_cause":   "Risk-laden language in the body (e.g. «{k}»)",
+        "kw_ev":      "The word «{k}» appears {n} times in the slice — points to a financial/operational issue worth escalating.",
+        "day_cause":  "Same-day concentration ({d})",
+        "day_ev":     "{p}% of the slice were logged on a single day — likely a specific event that day (release, announcement, outage).",
+    },
+}
 
-    Returns up to 3 hypothesised drivers with a probability % and a reason
-    text grounded in the data signals. The probabilities are not Bayesian —
-    they are share-of-evidence weights normalised to 100%, surfacing the
-    Pareto pattern the user explicitly asked for.
-    """
+
+def _attribute_causes(df: pd.DataFrame, *, category: str | None = None,
+                      topic: str | None = None, lang: str = "ar") -> list[dict]:
+    """Decompose 'why is this X concentrated/elevated?' into ranked causes."""
     if df.empty:
         return []
+    C = _CAUSE_TXT.get(lang, _CAUSE_TXT["ar"])
 
-    # Build the slice we are explaining
     sl = df
     if category: sl = sl[sl["category"] == category]
     if topic:    sl = sl[sl["topic_label"] == topic]
@@ -702,7 +913,6 @@ def _attribute_causes(df: pd.DataFrame, *, category: str | None = None,
 
     candidates: list[dict] = []
 
-    # Cause 1: dominant body phrase (recurring text)
     if "body" in sl.columns:
         norm = sl["body"].astype(str).str.strip().str.replace(r"\s+", " ", regex=True)
         top_phrase = norm.value_counts().head(1)
@@ -711,13 +921,11 @@ def _attribute_causes(df: pd.DataFrame, *, category: str | None = None,
             share = n / len(sl)
             if n >= 3 and share >= 0.05:
                 candidates.append({
-                    "cause": f"تكرار النص ذاته «{phrase[:60]}»",
-                    "weight": share * 0.9,
-                    "evidence": f"{n} طلب من أصل {len(sl)} يحملون النص نفسه — يرجّح أن المصدر "
-                                "مستفيد متكرر أو مشكلة منهجية واحدة.",
+                    "cause":    C["dup_cause"].format(p=phrase[:60]),
+                    "weight":   share * 0.9,
+                    "evidence": C["dup_ev"].format(n=n, m=len(sl)),
                 })
 
-    # Cause 2: dominant topic within the slice
     if topic is None and "topic_label" in sl.columns:
         top_topic = sl["topic_label"].value_counts().head(1)
         if not top_topic.empty:
@@ -725,13 +933,11 @@ def _attribute_causes(df: pd.DataFrame, *, category: str | None = None,
             tshare = tn / len(sl)
             if tshare >= 0.20:
                 candidates.append({
-                    "cause": f"تركّز في موضوع «{tname}»",
-                    "weight": tshare * 0.85,
-                    "evidence": f"{tn} طلب ({tshare*100:.0f}٪ من الشريحة) ينتمون لموضوع واحد — "
-                                "يرجّح أن المصدر مشكلة محدّدة في هذا المسار.",
+                    "cause":    C["topic_cause"].format(t=tname),
+                    "weight":   tshare * 0.85,
+                    "evidence": C["topic_ev"].format(n=tn, p=int(tshare*100)),
                 })
 
-    # Cause 3: dominant category within the slice (when explaining a topic)
     if category is None and "category" in sl.columns:
         top_cat = sl["category"].value_counts().head(1)
         if not top_cat.empty:
@@ -739,33 +945,25 @@ def _attribute_causes(df: pd.DataFrame, *, category: str | None = None,
             cshare = cn / len(sl)
             if cshare >= 0.50:
                 candidates.append({
-                    "cause": f"كل الطلبات تقريباً في فئة «{top_cat.index[0]}»",
-                    "weight": cshare * 0.7,
-                    "evidence": f"{cshare*100:.0f}٪ من الشريحة من فئة واحدة — التحدي تشغيلي "
-                                "في فريق هذه الفئة وليس عاماً.",
+                    "cause":    C["cat_cause"].format(c=top_cat.index[0]),
+                    "weight":   cshare * 0.7,
+                    "evidence": C["cat_ev"].format(p=int(cshare*100)),
                 })
 
-    # Cause 4: high-severity signal keyword presence
     sev_kw = ["متعسر", "تعثر", "متأخر", "تأخر", "إيقاف", "ايقاف", "خصم", "احتيال",
               "رفض", "استرداد", "مستحقات"]
     body_text = sl["body"].astype(str).str.cat(sep=" ")
-    hits = []
-    for kw in sev_kw:
-        c = body_text.count(kw)
-        if c >= 3:
-            hits.append((kw, c))
+    hits = [(kw, body_text.count(kw)) for kw in sev_kw if body_text.count(kw) >= 3]
     if hits:
         hits.sort(key=lambda x: -x[1])
         top_kw, top_c = hits[0]
         share = top_c / len(sl)
         candidates.append({
-            "cause": f"إشارات حساسة في النص (مثل «{top_kw}»)",
-            "weight": min(0.6, share * 0.6),
-            "evidence": f"كلمة «{top_kw}» وردت {top_c} مرة في الشريحة — تشير إلى "
-                        "مشكلة مالية/تشغيلية تستدعي التصعيد.",
+            "cause":    C["kw_cause"].format(k=top_kw),
+            "weight":   min(0.6, share * 0.6),
+            "evidence": C["kw_ev"].format(k=top_kw, n=top_c),
         })
 
-    # Cause 5: temporal concentration — same week or day
     if "closed_at" in sl.columns and len(sl) >= 5:
         days = pd.to_datetime(sl["closed_at"]).dt.date.value_counts()
         if not days.empty:
@@ -773,10 +971,9 @@ def _attribute_causes(df: pd.DataFrame, *, category: str | None = None,
             day_share = top_day_count / len(sl)
             if day_share >= 0.30:
                 candidates.append({
-                    "cause": f"تركّز يومي ({days.index[0]})",
-                    "weight": day_share * 0.55,
-                    "evidence": f"{day_share*100:.0f}٪ من الشريحة سُجّلت في يوم واحد — "
-                                "يرجّح أن سبب الموجة حدث محدّد بذلك اليوم (تحديث نظام، إعلان، إلخ).",
+                    "cause":    C["day_cause"].format(d=days.index[0]),
+                    "weight":   day_share * 0.55,
+                    "evidence": C["day_ev"].format(p=int(day_share*100)),
                 })
 
     if not candidates:
@@ -792,13 +989,89 @@ def _attribute_causes(df: pd.DataFrame, *, category: str | None = None,
     return candidates
 
 
-def rule_based_insights(df: pd.DataFrame) -> list[dict]:
-    """Concrete, evidence-backed insights for financial-services CX.
+_TXT = {
+    "ar": {
+        "anomaly_title":     "تنبيه: ارتفاع في «{v}»",
+        "anomaly_ev":        "رصد النظام {n} طلب في «{v}» مقابل متوسط تاريخي {b} طلب/أسبوع.",
+        "anomaly_ev_new":    "رصد النظام {n} طلب جديد في «{v}» — لم يكن مرئياً سابقاً.",
+        "anomaly_action":    "تكليف ({u}) بفحص الموجة فوراً. {sa}",
+        "anomaly_metric":    "عودة الحجم الأسبوعي إلى المتوسط التاريخي خلال أسبوعين.",
+        "risk_title":        "موضوع «{t}» يستنزف موارد الفريق",
+        "risk_ev":           "{n} طلب في الفترة، منها {p}٪ بخطورة عالية — أعلى تركيز خطورة بين الموضوعات.",
+        "risk_action":       "إحالة المسار إلى ({u}). {ab}",
+        "risk_metric":       "خفض نسبة الخطورة العالية في الموضوع إلى ما دون 30٪ خلال 6 أسابيع.",
+        "mom_title":         "موضوع متصاعد: «{t}»",
+        "mom_ev":            "الطلبات ارتفعت من {p} إلى {r} (+{g}٪) في آخر 4 أسابيع.",
+        "mom_action":        "({u}): {ab}",
+        "mom_metric":        "خفض الطلبات في هذا الموضوع بنسبة 30٪ خلال شهر.",
+        "compl_title":       "نسبة الشكاوى تستحق إصلاحاً منهجياً",
+        "compl_ev":          "الشكاوى تمثّل {p}٪ من إجمالي الطلبات ({n} طلب). أكبر مساهم: «{t}» بـ{tn} شكوى.",
+        "compl_action":      "تشكيل فريق سريع لمراجعة أسباب الشكاوى المرتبطة بـ«{t}» وإطلاق إصلاحات قصيرة المدى خلال أسبوعين.",
+        "compl_metric":      "خفض نسبة الشكاوى الكلية إلى أقل من 12٪ خلال شهرين.",
+        "opp_title":         "فرصة خفض الحمل عبر الخدمة الذاتية",
+        "opp_ev":            "الطلبات الإدارية (استعلامات وتحديث بيانات) تمثّل {p}٪ من الإجمالي ({n} طلب) — معظمها قابل للأتمتة.",
+        "opp_action":        "تفعيل واجهة خدمة ذاتية للاستعلامات المتكرّرة على البوابة وتطبيق الجوال، مع روابط مباشرة من رسائل الإشعار.",
+        "opp_metric":        "خفض حجم هذه الطلبات في القناة البشرية بنسبة 25٪ خلال 8 أسابيع.",
+        "rec_title":         "حالة متكرّرة: «{p}»",
+        "rec_ev":            "النص نفسه ورد {n} مرة خلال آخر 60 يوماً، غالبيته في فئة «{c}»، وبنسبة خطورة عالية {h}٪.",
+        "rec_action":        "فحص ما إذا كان الطلب يأتي من مستفيد واحد متكرّر أم من عدة مستفيدين بنفس المشكلة — والمعالجة وفقاً لذلك.",
+        "rec_metric":        "إغلاق جذور المشكلة وإيقاف تكرار النص خلال شهر.",
+    },
+    "en": {
+        "anomaly_title":     "Alert: rise in «{v}»",
+        "anomaly_ev":        "{n} requests in «{v}» vs a historical average of {b}/week.",
+        "anomaly_ev_new":    "{n} new requests in «{v}» — not previously visible.",
+        "anomaly_action":    "Task ({u}) to investigate the surge immediately. {sa}",
+        "anomaly_metric":    "Return weekly volume to the historical average within two weeks.",
+        "risk_title":        "Topic «{t}» is draining team resources",
+        "risk_ev":           "{n} requests in the period; {p}% are high-severity — the highest severity concentration among topics.",
+        "risk_action":       "Route this stream to ({u}). {ab}",
+        "risk_metric":       "Drop the topic's high-severity rate below 30% within 6 weeks.",
+        "mom_title":         "Rising topic: «{t}»",
+        "mom_ev":            "Requests rose from {p} to {r} (+{g}%) over the last 4 weeks.",
+        "mom_action":        "({u}): {ab}",
+        "mom_metric":        "Reduce requests in this topic by 30% within a month.",
+        "compl_title":       "Complaint share warrants a systemic fix",
+        "compl_ev":          "Complaints are {p}% of all requests ({n} total). Biggest driver: «{t}» with {tn} complaints.",
+        "compl_action":      "Stand up a quick task force to review root causes of complaints tied to «{t}» and ship short-term fixes within two weeks.",
+        "compl_metric":      "Reduce overall complaint share below 12% within two months.",
+        "opp_title":         "Opportunity: deflect routine load to self-service",
+        "opp_ev":            "Administrative requests (inquiries and data updates) are {p}% of total ({n} requests) — most are automatable.",
+        "opp_action":        "Roll out a self-service surface for the most-repeated inquiries on the portal and mobile app, with deep links from notification messages.",
+        "opp_metric":        "Reduce these requests on the human channel by 25% within 8 weeks.",
+        "rec_title":         "Recurring case: «{p}»",
+        "rec_ev":            "The same text appeared {n} times in the last 60 days, mostly in category «{c}», with {h}% high severity.",
+        "rec_action":        "Investigate whether the requests come from one repeat beneficiary or multiple beneficiaries hitting the same issue — handle accordingly.",
+        "rec_metric":        "Close the underlying root cause and stop the text from recurring within a month.",
+    },
+}
 
-    Each insight carries: title, evidence (with numbers), action (with unit),
-    metric (measurable target), kind (icon/color hint), and 2-3 example
-    request IDs from the actual data.
+
+def _localize_value(df: pd.DataFrame, value: str, dimension: str, lang: str) -> str:
+    """Translate a category or topic value when rendering in English."""
+    if lang != "en":
+        return value
+    from src.llm_client import CATEGORY_EN  # local import to avoid cycle at module top
+    if dimension == "category":
+        return CATEGORY_EN.get(value, value)
+    if dimension == "topic_label":
+        if "topic_label_ar" in df.columns and "topic_label_en" in df.columns:
+            m = df[df["topic_label_ar"] == value]
+            if not m.empty:
+                en = m["topic_label_en"].iloc[0]
+                if en:
+                    return en
+    return value
+
+
+def rule_based_insights(df: pd.DataFrame, lang: str = "ar") -> list[dict]:
+    """Concrete, evidence-backed insights — produced fully in `lang`.
+
+    Each insight carries: title, evidence (with numbers), causes (80/20),
+    action (with unit), metric (measurable target), kind (icon/color hint),
+    and example request IDs from the actual data.
     """
+    L = _TXT.get(lang, _TXT["ar"])
     out: list[dict] = []
     if df.empty:
         return out
@@ -807,28 +1080,24 @@ def rule_based_insights(df: pd.DataFrame) -> list[dict]:
     topics = top_recurring_topics(df, top_n=12)
 
     # 1) Anomalies — surface up to 2
-    alerts = detect_weekly_anomalies(df)
+    alerts = detect_weekly_anomalies(df, lang=lang)
     for a in alerts[:2]:
-        unit, _ = _topic_action_map(a.value)
+        unit, _ = _topic_action_map(a.value, lang)
         if a.dimension == "category":
             ex = _examples_for(df, category=a.value)
-            causes = _attribute_causes(df, category=a.value)
+            causes = _attribute_causes(df, category=a.value, lang=lang)
         else:
             ex = _examples_for(df, topic_label=a.value)
-            causes = _attribute_causes(df, topic=a.value)
-        evidence = (
-            f"رصد النظام {a.count} طلب في «{a.value}» مقابل متوسط تاريخي "
-            f"{a.baseline_mean:.0f} طلب/أسبوع."
-            if a.baseline_mean > 0 else
-            f"رصد النظام {a.count} طلب جديد في «{a.value}» — لم يكن مرئياً سابقاً."
-        )
+            causes = _attribute_causes(df, topic=a.value, lang=lang)
+        ev_template = L["anomaly_ev"] if a.baseline_mean > 0 else L["anomaly_ev_new"]
+        v_local = _localize_value(df, a.value, a.dimension, lang)
         out.append({
             "kind": "anomaly",
-            "title": f"تنبيه: ارتفاع في «{a.value}»",
-            "evidence": evidence,
-            "causes": causes,
-            "action": f"تكليف ({unit}) بفحص الموجة فوراً. {a.suggested_action}",
-            "metric": "عودة الحجم الأسبوعي إلى المتوسط التاريخي خلال أسبوعين.",
+            "title":   L["anomaly_title"].format(v=v_local),
+            "evidence": ev_template.format(n=a.count, v=v_local, b=int(a.baseline_mean)),
+            "causes":   causes,
+            "action":   L["anomaly_action"].format(u=unit, sa=a.suggested_action),
+            "metric":   L["anomaly_metric"],
             "examples": ex,
         })
 
@@ -836,19 +1105,17 @@ def rule_based_insights(df: pd.DataFrame) -> list[dict]:
     bad = topics[(topics["high_pct"] >= 50) & (topics["count"] >= 30)]
     if not bad.empty:
         r = bad.iloc[0]
-        unit, action_body = _topic_action_map(r["topic_label"])
+        unit, action_body = _topic_action_map(r["topic_label"], lang)
         ex = _examples_for(df, topic_label=r["topic_label"], severity="عالية")
-        causes = _attribute_causes(df, topic=r["topic_label"])
+        causes = _attribute_causes(df, topic=r["topic_label"], lang=lang)
+        t_local = _localize_value(df, r["topic_label"], "topic_label", lang)
         out.append({
             "kind": "risk",
-            "title": f"موضوع «{r['topic_label']}» يستنزف موارد الفريق",
-            "evidence": (
-                f"{int(r['count'])} طلب في الفترة، منها {r['high_pct']:.0f}٪ "
-                f"بخطورة عالية — أعلى تركيز خطورة بين الموضوعات."
-            ),
-            "causes": causes,
-            "action": f"إحالة المسار إلى ({unit}). {action_body}",
-            "metric": f"خفض نسبة الخطورة العالية في الموضوع إلى ما دون 30٪ خلال 6 أسابيع.",
+            "title":    L["risk_title"].format(t=t_local),
+            "evidence": L["risk_ev"].format(n=int(r["count"]), p=int(r["high_pct"])),
+            "causes":   causes,
+            "action":   L["risk_action"].format(u=unit, ab=action_body),
+            "metric":   L["risk_metric"],
             "examples": ex,
         })
 
@@ -857,19 +1124,17 @@ def rule_based_insights(df: pd.DataFrame) -> list[dict]:
     rising = mom[mom["growth_pct"] > 30]
     if not rising.empty:
         r = rising.iloc[0]
-        unit, action_body = _topic_action_map(r["topic_label"])
+        unit, action_body = _topic_action_map(r["topic_label"], lang)
         ex = _examples_for(df, topic_label=r["topic_label"])
-        causes = _attribute_causes(df, topic=r["topic_label"])
+        causes = _attribute_causes(df, topic=r["topic_label"], lang=lang)
+        t_local = _localize_value(df, r["topic_label"], "topic_label", lang)
         out.append({
             "kind": "momentum",
-            "title": f"موضوع متصاعد: «{r['topic_label']}»",
-            "evidence": (
-                f"الطلبات ارتفعت من {int(r['prior'])} إلى {int(r['recent'])} "
-                f"(+{r['growth_pct']:.0f}٪) في آخر 4 أسابيع."
-            ),
-            "causes": causes,
-            "action": f"({unit}): {action_body}",
-            "metric": "خفض الطلبات في هذا الموضوع بنسبة 30٪ خلال شهر.",
+            "title":    L["mom_title"].format(t=t_local),
+            "evidence": L["mom_ev"].format(p=int(r["prior"]), r=int(r["recent"]), g=int(r["growth_pct"])),
+            "causes":   causes,
+            "action":   L["mom_action"].format(u=unit, ab=action_body),
+            "metric":   L["mom_metric"],
             "examples": ex,
         })
 
@@ -881,20 +1146,17 @@ def rule_based_insights(df: pd.DataFrame) -> list[dict]:
         topic_name = top_complaint_topic.index[0] if not top_complaint_topic.empty else "—"
         topic_count = int(top_complaint_topic.iloc[0]) if not top_complaint_topic.empty else 0
         ex = _examples_for(df, category="شكوى", topic_label=topic_name)
-        causes = _attribute_causes(df, category="شكوى")
+        causes = _attribute_causes(df, category="شكوى", lang=lang)
+        topic_local = _localize_value(df, topic_name, "topic_label", lang)
         out.append({
             "kind": "complaints",
-            "title": "نسبة الشكاوى تستحق إصلاحاً منهجياً",
-            "evidence": (
-                f"الشكاوى تمثّل {k.pct_complaints:.0f}٪ من إجمالي الطلبات "
-                f"({_count_in(df, 'شكوى')} طلب). أكبر مساهم: «{topic_name}» بـ{topic_count} شكوى."
-            ),
-            "causes": causes,
-            "action": (
-                f"تشكيل فريق سريع لمراجعة أسباب الشكاوى المرتبطة بـ«{topic_name}» "
-                "وإطلاق إصلاحات قصيرة المدى خلال أسبوعين."
-            ),
-            "metric": "خفض نسبة الشكاوى الكلية إلى أقل من 12٪ خلال شهرين.",
+            "title":    L["compl_title"],
+            "evidence": L["compl_ev"].format(p=int(k.pct_complaints),
+                                              n=_count_in(df, "شكوى"),
+                                              t=topic_local, tn=topic_count),
+            "causes":   causes,
+            "action":   L["compl_action"].format(t=topic_local),
+            "metric":   L["compl_metric"],
             "examples": ex,
         })
 
@@ -909,16 +1171,10 @@ def rule_based_insights(df: pd.DataFrame) -> list[dict]:
         ex = _examples_for(df, topic_label=topic_name)
         out.append({
             "kind": "opportunity",
-            "title": "فرصة خفض الحمل عبر الخدمة الذاتية",
-            "evidence": (
-                f"الطلبات الإدارية (استعلامات وتحديث بيانات) تمثّل {share:.0f}٪ "
-                f"من الإجمالي ({info_total} طلب) — معظمها قابل للأتمتة."
-            ),
-            "action": (
-                "تفعيل واجهة خدمة ذاتية للاستعلامات المتكرّرة على البوابة وتطبيق "
-                "الجوال، مع روابط مباشرة من رسائل الإشعار."
-            ),
-            "metric": "خفض حجم هذه الطلبات في القناة البشرية بنسبة 25٪ خلال 8 أسابيع.",
+            "title":    L["opp_title"],
+            "evidence": L["opp_ev"].format(p=int(share), n=info_total),
+            "action":   L["opp_action"],
+            "metric":   L["opp_metric"],
             "examples": ex,
         })
 
@@ -929,17 +1185,12 @@ def rule_based_insights(df: pd.DataFrame) -> list[dict]:
         ex = [{"id": int(i), "body": top["phrase"][:70]} for i in (top["sample_ids"] or [])[:3]]
         out.append({
             "kind": "recurring",
-            "title": f"حالة متكرّرة: «{top['phrase'][:50]}»",
-            "evidence": (
-                f"النص نفسه ورد {int(top['count'])} مرة خلال آخر 60 يوماً، "
-                f"غالبيته في فئة «{top['top_category']}»، "
-                f"وبنسبة خطورة عالية {top['high_pct']:.0f}٪."
-            ),
-            "action": (
-                "فحص ما إذا كان الطلب يأتي من مستفيد واحد متكرّر أم من عدة "
-                "مستفيدين بنفس المشكلة — والمعالجة وفقاً لذلك."
-            ),
-            "metric": "إغلاق جذور المشكلة وإيقاف تكرار النص خلال شهر.",
+            "title":    L["rec_title"].format(p=top["phrase"][:50]),
+            "evidence": L["rec_ev"].format(n=int(top["count"]),
+                                            c=top["top_category"],
+                                            h=int(top["high_pct"])),
+            "action":   L["rec_action"],
+            "metric":   L["rec_metric"],
             "examples": ex,
         })
 

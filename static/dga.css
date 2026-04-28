@@ -598,6 +598,28 @@ body.lang-en .table th, body.lang-en .table td { text-align: left; }
 .tk-compose .textarea { width: 100%; min-height: 70px; }
 .tk-compose .btn { margin-top: var(--s-2); }
 
+/* Linked complaints (semantic groups) ---------------------------- */
+.linked {
+  padding: var(--s-4) 0;
+  border-bottom: 1px solid var(--line);
+}
+.linked:last-child { border-bottom: 0; }
+.linked__head {
+  display: flex; align-items: center; gap: var(--s-3); margin-bottom: var(--s-3);
+}
+.linked__cat { font-weight: 700; color: var(--ink); }
+.linked__hpct { color: var(--ink-faint); font-size: var(--fs-xs); margin-inline-start: auto; font-feature-settings: "tnum"; }
+.linked__row { display: flex; gap: var(--s-2); margin-bottom: var(--s-2); align-items: flex-start; }
+.linked__label {
+  flex: none; font-size: 11px; font-weight: 700;
+  background: var(--canvas); color: var(--ink-muted);
+  padding: 2px 10px; border-radius: var(--radius-pill);
+  white-space: nowrap;
+}
+.linked__label--act { background: var(--primary-pastel); color: var(--primary-shade); }
+.linked__txt { line-height: 1.55; color: var(--ink); }
+.linked__examples { margin-top: var(--s-3); padding: var(--s-3); background: var(--canvas); border-radius: var(--radius-sm); }
+
 /* Period-over-period card --------------------------------------- */
 .pop-grid {
   display: grid; gap: var(--s-3);

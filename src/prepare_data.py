@@ -80,9 +80,17 @@ def _enrich_one(row, prefer_llm: bool) -> pd.Series:
     e = llm_client.enrich_record(row.category, row.body, prefer_llm=prefer_llm)
     return pd.Series({
         "severity": e.severity,
-        "severity_reason": e.severity_reason,
-        "topic_label": e.topic_label,
-        "recommended_action": e.recommended_action,
+        # AR + EN parallel fields
+        "severity_reason_ar":   e.severity_reason_ar,
+        "severity_reason_en":   e.severity_reason_en,
+        "topic_label_ar":       e.topic_label_ar,
+        "topic_label_en":       e.topic_label_en,
+        "recommended_action_ar":e.recommended_action_ar,
+        "recommended_action_en":e.recommended_action_en,
+        # legacy names kept = AR (back-compat for any code/UX that hasn't switched yet)
+        "severity_reason":   e.severity_reason_ar,
+        "topic_label":       e.topic_label_ar,
+        "recommended_action":e.recommended_action_ar,
         "ai_source": e.source,
     })
 
@@ -107,20 +115,18 @@ def run(prefer_llm: Optional[bool] = None,
     cached: dict[int, dict] = {}
     if out_path.exists():
         prev = pd.read_parquet(out_path)
-        # Only reuse rows that have ALL required enrichment fields. If the
-        # schema evolved (e.g., we added severity_reason), force re-enrichment.
-        required = ("severity", "severity_reason", "topic_label", "recommended_action", "ai_source")
+        required = ("severity", "severity_reason_ar", "severity_reason_en",
+                    "topic_label_ar", "topic_label_en",
+                    "recommended_action_ar", "recommended_action_en", "ai_source")
         if all(c in prev.columns for c in required):
             for _, r in prev.iterrows():
-                if pd.isna(r["severity"]) or pd.isna(r["severity_reason"]):
+                if pd.isna(r["severity"]) or pd.isna(r["severity_reason_ar"]):
                     continue
-                cached[int(r["request_id"])] = {
-                    "severity": r["severity"],
-                    "severity_reason": r["severity_reason"],
-                    "topic_label": r["topic_label"],
-                    "recommended_action": r["recommended_action"],
-                    "ai_source": r["ai_source"],
-                }
+                cached[int(r["request_id"])] = {col: r[col] for col in required}
+                # legacy aliases
+                cached[int(r["request_id"])]["severity_reason"]    = r["severity_reason_ar"]
+                cached[int(r["request_id"])]["topic_label"]        = r["topic_label_ar"]
+                cached[int(r["request_id"])]["recommended_action"] = r["recommended_action_ar"]
 
     new_rows = []
     reused = 0

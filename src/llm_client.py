@@ -206,13 +206,33 @@ def _try_parse_json(text: str) -> dict | None:
 @dataclass
 class Enrichment:
     severity: str           # "عالية" | "متوسطة" | "منخفضة"
-    severity_reason: str    # one-sentence Arabic justification
-    topic_label: str        # short Arabic label
-    recommended_action: str # one-line next step in Arabic
+    severity_reason_ar: str
+    severity_reason_en: str
+    topic_label_ar: str
+    topic_label_en: str
+    recommended_action_ar: str
+    recommended_action_en: str
     source: str             # "llm" | "rule"
+
+    # Compat shims so older callers that read .topic_label / .severity_reason /
+    # .recommended_action still get the Arabic version (the system's primary).
+    @property
+    def topic_label(self) -> str: return self.topic_label_ar
+    @property
+    def severity_reason(self) -> str: return self.severity_reason_ar
+    @property
+    def recommended_action(self) -> str: return self.recommended_action_ar
 
 
 SEVERITY_VALUES = ("عالية", "متوسطة", "منخفضة")
+SEVERITY_EN = {"عالية": "High", "متوسطة": "Medium", "منخفضة": "Low"}
+CATEGORY_EN = {
+    "شكوى": "Complaint",
+    "استفسار": "Inquiry",
+    "اقتراح": "Suggestion",
+    "دعم فني": "Tech support",
+    "خدمة مراجع": "Reviewer service",
+}
 
 
 # --- Rule-based engine ---
@@ -223,67 +243,86 @@ SEVERITY_VALUES = ("عالية", "متوسطة", "منخفضة")
 
 # Patterns: phrase fragments → (severity, topic_hint, business interpretation)
 # Order matters: more specific patterns first.
+# Each pattern: (keywords, topic_ar, topic_en, reason_ar_template, reason_en_template)
 _HIGH_PATTERNS = [
     (("متعسر", "تعسر", "تعثر"),
-     "تعثّر في السداد",
-     "إشارة إلى حالة تعثّر في السداد، وهي من أعلى المخاطر التشغيلية لدى الصندوق وتستوجب تواصلاً مع لجنة التحصيل."),
+     "تعثّر في السداد", "Default in repayment",
+     "إشارة إلى حالة تعثّر في السداد، وهي من أعلى المخاطر التشغيلية وتستوجب تواصلاً مع فريق التحصيل.",
+     "Indicates a default in repayment — one of the highest operational risks; requires escalation to the collections team."),
     (("احتيال", "تزوير", "تلاعب"),
-     "بلاغ احتيال",
-     "إشارة محتملة إلى احتيال أو تلاعب، تتطلب تصعيداً فورياً لإدارة المخاطر والامتثال."),
+     "بلاغ احتيال", "Fraud report",
+     "إشارة محتملة إلى احتيال أو تلاعب، تتطلب تصعيداً فورياً لإدارة المخاطر والامتثال.",
+     "Possible fraud or tampering — requires immediate escalation to risk and compliance."),
     (("خصم خاطئ", "خصم زائد", "حُسم", "حسم خاطئ"),
-     "خصم مالي مُتنازَع عليه",
-     "ادعاء بخصم مالي غير صحيح من حساب المستفيد، يستلزم مراجعة فورية لفك الإشكال."),
+     "خصم مالي مُتنازَع عليه", "Disputed deduction",
+     "ادعاء بخصم مالي غير صحيح من حساب المستفيد، يستلزم مراجعة فورية لفك الإشكال.",
+     "Claim of an incorrect deduction from the beneficiary's account — needs immediate review."),
     (("ايقاف الحسم", "إيقاف الحسم", "إيقاف الخصم", "ايقاف الخصم"),
-     "إيقاف الخصم على القرض",
-     "طلب إيقاف الخصم على قرض قائم — قرار مالي حساس يؤثر على جدولة السداد."),
+     "إيقاف الخصم على القرض", "Loan deduction halt",
+     "طلب إيقاف الخصم على قرض قائم — قرار مالي حساس يؤثر على جدولة السداد.",
+     "Request to halt deductions on an active loan — a sensitive financial decision affecting repayment schedule."),
     (("متأخر", "تأخر", "تأخير", "لم يُصرف", "لم يصرف", "بدون رد", "بلا رد"),
-     "تأخر في الإجراء",
-     "ادعاء بتأخر في معالجة طلب أو صرف مالي، يؤثر مباشرةً على المستفيد ويتطلب متابعة عاجلة."),
+     "تأخر في الإجراء", "Delay in processing",
+     "ادعاء بتأخر في معالجة طلب أو صرف مالي، يؤثر مباشرةً على المستفيد ويتطلب متابعة عاجلة.",
+     "Claim of a processing or disbursement delay — directly affects the beneficiary and needs urgent follow-up."),
     (("رفض القرض", "رفض الطلب", "تم رفض"),
-     "رفض طلب",
-     "اعتراض على رفض طلب تمويل، يتطلب توضيحاً لأسباب القرار وفق سياسة الصندوق."),
+     "رفض طلب", "Application rejected",
+     "اعتراض على رفض طلب تمويل، يتطلب توضيحاً لأسباب القرار وفق السياسة.",
+     "Objection to a rejected financing request — requires clarification of the policy-based decision."),
     (("استرداد", "استرجاع المبلغ"),
-     "طلب استرداد",
-     "طلب استرداد مبلغ مالي، يتطلب التحقق من سجل المعاملة وإجراء التسوية."),
+     "طلب استرداد", "Refund request",
+     "طلب استرداد مبلغ مالي، يتطلب التحقق من سجل المعاملة وإجراء التسوية.",
+     "Refund request — requires verifying the transaction record and reconciling."),
     (("عاجل", "مستعجل", "ضروري"),
-     "طلب عاجل",
-     "وُصف الطلب بأنه عاجل من قِبل المستفيد، يستحق التعامل ضمن مسار الأولوية."),
+     "طلب عاجل", "Urgent request",
+     "وُصف الطلب بأنه عاجل من قِبل المستفيد، يستحق التعامل ضمن مسار الأولوية.",
+     "Beneficiary marked the request as urgent — should be handled in the priority queue."),
 ]
 
 _MEDIUM_PATTERNS = [
     (("سداد", "تسديد", "قسط", "أقساط"),
-     "السداد والأقساط",
-     "استعلام أو طلب يخصّ جدولة السداد أو الأقساط، يستحق متابعة لتفادي التحوّل إلى تعثّر."),
+     "السداد والأقساط", "Repayment & instalments",
+     "استعلام أو طلب يخصّ جدولة السداد أو الأقساط، يستحق متابعة لتفادي التحوّل إلى تعثّر.",
+     "Inquiry or request about the repayment schedule or instalments — worth following up to prevent default."),
     (("قرض", "تمويل"),
-     "القروض والتمويل",
-     "طلب يخصّ منتج تمويلي للصندوق، يتطلب توضيحاً من فريق الائتمان."),
+     "القروض والتمويل", "Loans & financing",
+     "طلب يخصّ منتج تمويلي، يتطلب توضيحاً من فريق الائتمان.",
+     "Question about a financing product — requires clarification from the credit team."),
     (("دعم زراعي", "دعم المزارعين", "دعم الإنتاج"),
-     "الدعم الزراعي",
-     "طلب يخصّ برامج الدعم الزراعي، يستحق إحالة إلى الجهة المختصة."),
+     "الدعم الزراعي", "Agricultural support",
+     "طلب يخصّ برامج الدعم، يستحق إحالة إلى الجهة المختصة.",
+     "Question about support programs — should be routed to the responsible unit."),
     (("دواجن", "ماشية", "أبقار", "أغنام", "نحل", "أسماك"),
-     "الإنتاج الحيواني",
-     "طلب يخصّ نشاط إنتاج حيواني ضمن نطاق الصندوق."),
+     "الإنتاج الحيواني", "Livestock production",
+     "طلب يخصّ نشاط إنتاج حيواني ضمن نطاق الصندوق.",
+     "Question about a livestock production activity in the program scope."),
     (("مشروع", "مزرعة"),
-     "مشاريع المستفيدين",
-     "طلب يخصّ مشروعاً قائماً للمستفيد، يستحق متابعة للحفاظ على استمراريته."),
+     "مشاريع المستفيدين", "Beneficiary projects",
+     "طلب يخصّ مشروعاً قائماً للمستفيد، يستحق متابعة للحفاظ على استمراريته.",
+     "Question about an active beneficiary project — worth following up to preserve continuity."),
     (("تحديث بيانات", "تحديث رقم", "تحديث الجوال"),
-     "تحديث البيانات",
-     "طلب تحديث بيانات تواصل أو شخصية، إجراء روتيني لكن يلزم لإكمال الخدمات."),
+     "تحديث البيانات", "Data update",
+     "طلب تحديث بيانات تواصل أو شخصية، إجراء روتيني لكن يلزم لإكمال الخدمات.",
+     "Contact / personal data update — routine, but required to complete services."),
     (("بوابة", "تطبيق", "موقع", "نظام"),
-     "القنوات الرقمية",
-     "طلب يخصّ تجربة الاستخدام في القنوات الرقمية للصندوق."),
+     "القنوات الرقمية", "Digital channels",
+     "طلب يخصّ تجربة الاستخدام في القنوات الرقمية.",
+     "Question about user experience on the digital channels."),
 ]
 
 _LOW_PATTERNS = [
     (("شكر", "تقدير", "ممتاز"),
-     "إشادة وثناء",
-     "إشادة من المستفيد، لا تستوجب إجراءً تصحيحياً."),
+     "إشادة وثناء", "Praise / thanks",
+     "إشادة من المستفيد، لا تستوجب إجراءً تصحيحياً.",
+     "Praise from the beneficiary — no corrective action required."),
     (("اقتراح", "مقترح", "تطوير"),
-     "اقتراح تطوير",
-     "اقتراح تحسين من المستفيد، يُحوَّل إلى سجل التحسينات."),
+     "اقتراح تطوير", "Improvement suggestion",
+     "اقتراح تحسين من المستفيد، يُحوَّل إلى سجل التحسينات.",
+     "Improvement suggestion — to be logged in the improvements register."),
     (("استعلام", "استفسار", "كيف", "متى", "ما هي"),
-     "استعلام عام",
-     "طلب معلومة عامة، يمكن الرد عليه من قاعدة المعرفة دون تصعيد."),
+     "استعلام عام", "General inquiry",
+     "طلب معلومة عامة، يمكن الرد عليه من قاعدة المعرفة دون تصعيد.",
+     "General information request — can be answered from the knowledge base without escalation."),
 ]
 
 
@@ -297,125 +336,187 @@ def _excerpt(body: str, limit: int = 60) -> str:
 
 
 def _match_pattern(text: str, patterns: list) -> tuple | None:
-    for keys, topic, reason in patterns:
+    for keys, topic_ar, topic_en, reason_ar, reason_en in patterns:
         for k in keys:
             if k in text:
-                return (k, topic, reason)
+                return (k, topic_ar, topic_en, reason_ar, reason_en)
     return None
 
 
-def _rule_classify(category: str, body: str) -> tuple[str, str, str]:
-    """Return (severity, topic_label, severity_reason)."""
+def _rule_classify(category: str, body: str) -> dict:
+    """Return a dict with severity + topic+reason in both AR and EN.
+
+    Body excerpts are kept verbatim (the "quotes" exception in EN mode):
+    we do not translate beneficiary content.
+    """
     cat = (category or "").strip()
+    cat_en = CATEGORY_EN.get(cat, cat)
     body_clean = (body or "").strip()
     text = f"{cat} {body_clean}"
     excerpt = _excerpt(body_clean)
 
-    # 1) High-severity domain-specific signals
+    def _join(reason: str, lang: str) -> str:
+        if not excerpt:
+            return reason
+        suffix = f" نص الطلب: «{excerpt}»." if lang == "ar" else f" Request text: «{excerpt}»."
+        return reason + suffix
+
+    # 1) High-severity signals
     hit = _match_pattern(text, _HIGH_PATTERNS)
     if hit:
-        keyword, topic, reason = hit
-        if excerpt and excerpt != keyword:
-            reason += f" نص الطلب: «{excerpt}»."
-        return "عالية", topic, reason
+        _, t_ar, t_en, r_ar, r_en = hit
+        return {
+            "severity": "عالية",
+            "topic_ar": t_ar, "topic_en": t_en,
+            "reason_ar": _join(r_ar, "ar"), "reason_en": _join(r_en, "en"),
+        }
 
     # 2) Category-driven default for complaints
     if cat == "شكوى":
         if excerpt:
-            return ("عالية", "الشكاوى العامة",
-                    f"شكوى مباشرة من المستفيد بشأن «{excerpt}» — تتطلب تصعيداً وتواصلاً استباقياً للحفاظ على رضا المتعامل.")
-        return ("عالية", "الشكاوى العامة",
-                "شكوى مباشرة بدون وصف تفصيلي — تستدعي اتصالاً استباقياً لاستيضاح المشكلة.")
+            return {
+                "severity": "عالية",
+                "topic_ar": "الشكاوى العامة", "topic_en": "General complaints",
+                "reason_ar": f"شكوى مباشرة من المستفيد بشأن «{excerpt}» — تتطلب تصعيداً وتواصلاً استباقياً للحفاظ على رضا المتعامل.",
+                "reason_en": f"Direct complaint from the beneficiary about «{excerpt}» — requires escalation and proactive outreach to preserve customer satisfaction.",
+            }
+        return {
+            "severity": "عالية",
+            "topic_ar": "الشكاوى العامة", "topic_en": "General complaints",
+            "reason_ar": "شكوى مباشرة بدون وصف تفصيلي — تستدعي اتصالاً استباقياً لاستيضاح المشكلة.",
+            "reason_en": "Direct complaint without details — needs a proactive call to clarify the issue.",
+        }
 
     # 3) Medium signals
     hit = _match_pattern(text, _MEDIUM_PATTERNS)
     if hit:
-        keyword, topic, reason = hit
-        if excerpt:
-            reason += f" نص الطلب: «{excerpt}»."
-        return "متوسطة", topic, reason
+        _, t_ar, t_en, r_ar, r_en = hit
+        return {
+            "severity": "متوسطة",
+            "topic_ar": t_ar, "topic_en": t_en,
+            "reason_ar": _join(r_ar, "ar"), "reason_en": _join(r_en, "en"),
+        }
 
     if cat == "دعم فني":
-        return ("متوسطة", "الدعم الفني للقنوات الرقمية",
-                f"طلب دعم فني{(' بشأن «' + excerpt + '»') if excerpt else ''} — يؤثر على قدرة المستفيد على إكمال خدمته.")
+        return {
+            "severity": "متوسطة",
+            "topic_ar": "الدعم الفني للقنوات الرقمية", "topic_en": "Digital-channel tech support",
+            "reason_ar": f"طلب دعم فني{(' بشأن «' + excerpt + '»') if excerpt else ''} — يؤثر على قدرة المستفيد على إكمال خدمته.",
+            "reason_en": f"Tech-support request{(' regarding «' + excerpt + '»') if excerpt else ''} — affects the beneficiary's ability to complete their service.",
+        }
 
     if cat == "خدمة مراجع":
-        return ("متوسطة", "خدمة المراجعين",
-                f"طلب يخصّ مسار خدمة المراجعين{(' حول «' + excerpt + '»') if excerpt else ''} — يتطلب متابعة لاستكمال إجراءات المستفيد.")
+        return {
+            "severity": "متوسطة",
+            "topic_ar": "خدمة المراجعين", "topic_en": "Reviewer service",
+            "reason_ar": f"طلب يخصّ مسار خدمة المراجعين{(' حول «' + excerpt + '»') if excerpt else ''} — يتطلب متابعة لاستكمال إجراءات المستفيد.",
+            "reason_en": f"Reviewer-service request{(' about «' + excerpt + '»') if excerpt else ''} — needs follow-up to complete the beneficiary's procedures.",
+        }
 
     # 4) Low signals
     hit = _match_pattern(text, _LOW_PATTERNS)
     if hit:
-        keyword, topic, reason = hit
-        if excerpt:
-            reason += f" نص الطلب: «{excerpt}»."
-        return "منخفضة", topic, reason
+        _, t_ar, t_en, r_ar, r_en = hit
+        return {
+            "severity": "منخفضة",
+            "topic_ar": t_ar, "topic_en": t_en,
+            "reason_ar": _join(r_ar, "ar"), "reason_en": _join(r_en, "en"),
+        }
 
     if cat in ("استفسار", "اقتراح"):
-        topic = "استعلام عام" if cat == "استفسار" else "اقتراح تطوير"
-        reason = (
-            f"طلب من نوع «{cat}»{(' حول «' + excerpt + '»') if excerpt else ''} — "
-            "لا يستوجب تصعيداً ويمكن الرد ضمن المسار الاعتيادي."
-        )
-        return "منخفضة", topic, reason
+        if cat == "استفسار":
+            t_ar, t_en = "استعلام عام", "General inquiry"
+        else:
+            t_ar, t_en = "اقتراح تطوير", "Improvement suggestion"
+        r_ar = (f"طلب من نوع «{cat}»{(' حول «' + excerpt + '»') if excerpt else ''} — "
+                "لا يستوجب تصعيداً ويمكن الرد ضمن المسار الاعتيادي.")
+        r_en = (f"A «{cat_en}» type request{(' about «' + excerpt + '»') if excerpt else ''} — "
+                "does not require escalation and can be handled in the regular flow.")
+        return {
+            "severity": "منخفضة",
+            "topic_ar": t_ar, "topic_en": t_en,
+            "reason_ar": r_ar, "reason_en": r_en,
+        }
 
     # 5) Default
-    return ("متوسطة", cat or "غير مصنّف",
-            f"تصنيف افتراضي{(' للطلب بشأن «' + excerpt + '»') if excerpt else ''} — لم تُكتشف إشارات صريحة تحدد مستوى الأولوية.")
+    return {
+        "severity": "متوسطة",
+        "topic_ar": cat or "غير مصنّف",
+        "topic_en": cat_en or "Uncategorised",
+        "reason_ar": f"تصنيف افتراضي{(' للطلب بشأن «' + excerpt + '»') if excerpt else ''} — لم تُكتشف إشارات صريحة تحدد مستوى الأولوية.",
+        "reason_en": f"Default classification{(' for the request about «' + excerpt + '»') if excerpt else ''} — no explicit signals detected to determine priority.",
+    }
 
 
 def _rule_topic(category: str, body: str) -> str:
-    return _rule_classify(category, body)[1]
+    return _rule_classify(category, body)["topic_ar"]
 
 
 _ACTION_BY_CATEGORY_AND_SEVERITY = {
-    ("شكوى", "عالية"): "تصعيد فوري إلى مختص الشكاوى — اتصال خلال 24 ساعة + تسجيل في نظام الجودة",
-    ("شكوى", "متوسطة"): "إحالة إلى فريق رعاية المستفيدين مع SLA 48 ساعة",
-    ("دعم فني", "عالية"): "تذكرة دعم فوري + التحقق من توفّر الخدمة الرقمية على مستوى الصندوق",
-    ("دعم فني", "متوسطة"): "فتح تذكرة دعم فني والرد بحلّ موثّق",
-    ("استفسار", "منخفضة"): "الرد من قاعدة المعرفة وإغلاق الطلب مع تأكيد الفهم",
-    ("استفسار", "متوسطة"): "تحويل إلى المختص للتأكد من المعلومة قبل الرد",
-    ("اقتراح", "منخفضة"): "تسجيل المقترح في سجل التحسينات وإحالته إلى لجنة التطوير",
-    ("خدمة مراجع", "متوسطة"): "تحويل إلى مسار خدمة المراجعين وإبلاغ المستفيد بالمتطلبات الناقصة",
-    ("خدمة مراجع", "عالية"): "خدمة مراجعين عاجلة — متابعة المستفيد ومراجعة الملف",
+    ("شكوى", "عالية"):    ("تصعيد فوري إلى مختص الشكاوى — اتصال خلال 24 ساعة + تسجيل في نظام الجودة",
+                            "Immediate escalation to the complaints specialist — call within 24 hours + log in the QA system"),
+    ("شكوى", "متوسطة"):   ("إحالة إلى فريق رعاية المستفيدين مع SLA 48 ساعة",
+                            "Route to the beneficiary care team with a 48-hour SLA"),
+    ("دعم فني", "عالية"):  ("تذكرة دعم فوري + التحقق من توفّر الخدمة الرقمية",
+                            "Immediate support ticket + verify availability of the digital service"),
+    ("دعم فني", "متوسطة"): ("فتح تذكرة دعم فني والرد بحلّ موثّق",
+                            "Open a tech-support ticket and reply with a documented fix"),
+    ("استفسار", "منخفضة"): ("الرد من قاعدة المعرفة وإغلاق الطلب مع تأكيد الفهم",
+                            "Reply from the knowledge base and close the request, confirming understanding"),
+    ("استفسار", "متوسطة"): ("تحويل إلى المختص للتأكد من المعلومة قبل الرد",
+                            "Route to the specialist to verify the information before replying"),
+    ("اقتراح", "منخفضة"):  ("تسجيل المقترح في سجل التحسينات وإحالته إلى لجنة التطوير",
+                            "Log the suggestion in the improvements register and refer it to the development committee"),
+    ("خدمة مراجع", "متوسطة"): ("تحويل إلى مسار خدمة المراجعين وإبلاغ المستفيد بالمتطلبات الناقصة",
+                                "Route to the reviewer-service track and notify the beneficiary of any missing requirements"),
+    ("خدمة مراجع", "عالية"):  ("خدمة مراجعين عاجلة — متابعة المستفيد ومراجعة الملف",
+                                "Urgent reviewer service — follow up with the beneficiary and review the file"),
 }
 
 
-def _rule_action(category: str, body: str, severity: str, topic: str) -> str:
+def _rule_action(category: str, body: str, severity: str, topic: str) -> tuple[str, str]:
     cat = (category or "").strip()
     base = _ACTION_BY_CATEGORY_AND_SEVERITY.get((cat, severity))
     if base:
         return base
-    # Topic-driven fallbacks for high severity
     if severity == "عالية":
         if "تعثّر" in topic or "تعثر" in topic:
-            return "إحالة فورية إلى لجنة التحصيل وتفعيل خطة استرداد مرنة وفق وضع المستفيد"
+            return ("إحالة فورية إلى فريق التحصيل وتفعيل خطة استرداد مرنة وفق وضع المستفيد",
+                    "Immediate referral to the collections team and activation of a flexible recovery plan tailored to the beneficiary")
         if "احتيال" in topic:
-            return "تصعيد إلى إدارة المخاطر والامتثال خلال ساعة + إيقاف العمليات المرتبطة"
+            return ("تصعيد إلى إدارة المخاطر والامتثال خلال ساعة + إيقاف العمليات المرتبطة",
+                    "Escalate to risk and compliance within one hour + suspend the related operations")
         if "خصم" in topic:
-            return "مراجعة سجل الخصم خلال 24 ساعة وإجراء التسوية المالية إن ثبت الخطأ"
+            return ("مراجعة سجل الخصم خلال 24 ساعة وإجراء التسوية المالية إن ثبت الخطأ",
+                    "Review the deduction record within 24 hours and reconcile the amount if an error is confirmed")
         if "تأخر" in topic:
-            return "متابعة الطلب لدى الجهة المختصة واتصال استباقي بالمستفيد بنتيجة المراجعة"
+            return ("متابعة الطلب لدى الجهة المختصة واتصال استباقي بالمستفيد بنتيجة المراجعة",
+                    "Follow up with the responsible unit and proactively contact the beneficiary with the outcome")
     if severity == "متوسطة":
-        return "إحالة إلى الجهة المختصة وفق الموضوع، مع SLA لا يتجاوز 3 أيام عمل"
-    return "الرد من قاعدة المعرفة وإغلاق الطلب مع تأكيد فهم المستفيد"
+        return ("إحالة إلى الجهة المختصة وفق الموضوع، مع SLA لا يتجاوز 3 أيام عمل",
+                "Route to the responsible unit by topic, with an SLA of no more than 3 business days")
+    return ("الرد من قاعدة المعرفة وإغلاق الطلب مع تأكيد فهم المستفيد",
+            "Reply from the knowledge base and close the request, confirming the beneficiary's understanding")
 
 
 def _rule_enrich(category: str, body: str) -> Enrichment:
-    sev, topic, reason = _rule_classify(category, body)
+    cls = _rule_classify(category, body)
+    act_ar, act_en = _rule_action(category, body, cls["severity"], cls["topic_ar"])
     return Enrichment(
-        severity=sev,
-        severity_reason=reason,
-        topic_label=topic,
-        recommended_action=_rule_action(category, body, sev, topic),
+        severity=cls["severity"],
+        severity_reason_ar=cls["reason_ar"],
+        severity_reason_en=cls["reason_en"],
+        topic_label_ar=cls["topic_ar"],
+        topic_label_en=cls["topic_en"],
+        recommended_action_ar=act_ar,
+        recommended_action_en=act_en,
         source="rule",
     )
 
 
-# helper to keep the fallback API used elsewhere unchanged
 def _rule_severity(category: str, body: str) -> tuple[str, str]:
-    sev, _, reason = _rule_classify(category, body)
-    return sev, reason
+    cls = _rule_classify(category, body)
+    return cls["severity"], cls["reason_ar"]
 
 
 # --- LLM-backed enrichment ---
@@ -443,7 +544,11 @@ _ENRICH_PROMPT_TMPL = """صنّف هذا الطلب الوارد من المست
 
 
 def enrich_record(category: str, body: str, *, prefer_llm: bool = True) -> Enrichment:
-    """Classify a single record. Tries Groq → Ollama → rule-based."""
+    """Classify a single record. Tries Groq → Ollama → rule-based.
+
+    Always returns AR + EN versions of every text field. If the LLM only
+    supplies one language, the other is filled from the rule engine.
+    """
     if prefer_llm and (groq_available() or ollama_available()):
         try:
             raw, provider = _llm_generate(
@@ -453,25 +558,21 @@ def enrich_record(category: str, body: str, *, prefer_llm: bool = True) -> Enric
             )
             parsed = _try_parse_json(raw)
             if parsed:
-                # Topic from rules used as fallback below
-                _, rule_topic, rule_reason = _rule_classify(category, body) \
-                    if hasattr(__import__('sys').modules[__name__], '_rule_classify') \
-                    else (None, _rule_topic(category, body), _rule_severity(category, body)[1])
+                rule = _rule_enrich(category, body)
                 sev = str(parsed.get("severity", "")).strip()
                 if sev not in SEVERITY_VALUES:
-                    sev, reason = _rule_severity(category, body)
-                else:
-                    reason = str(parsed.get("severity_reason") or "").strip() or rule_reason
-                topic = str(parsed.get("topic_label") or "").strip() or rule_topic
-                action = (
-                    str(parsed.get("recommended_action") or "").strip()
-                    or _rule_action(category, body, sev, topic)
-                )
+                    sev = rule.severity
+                topic_ar = (str(parsed.get("topic_label") or "").strip() or rule.topic_label_ar)
+                reason_ar = (str(parsed.get("severity_reason") or "").strip() or rule.severity_reason_ar)
+                action_ar = (str(parsed.get("recommended_action") or "").strip() or rule.recommended_action_ar)
                 return Enrichment(
                     severity=sev,
-                    severity_reason=reason,
-                    topic_label=topic,
-                    recommended_action=action,
+                    severity_reason_ar=reason_ar,
+                    severity_reason_en=rule.severity_reason_en,
+                    topic_label_ar=topic_ar,
+                    topic_label_en=rule.topic_label_en,
+                    recommended_action_ar=action_ar,
+                    recommended_action_en=rule.recommended_action_en,
                     source=provider,
                 )
         except Exception as exc:

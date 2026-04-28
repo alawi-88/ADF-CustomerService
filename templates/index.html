@@ -150,17 +150,6 @@
           <div class="pop-grid" id="pop-grid"></div>
         </div>
 
-        <div class="card section insights-card">
-          <div class="card__head">
-            <h2 class="card__title">
-              <svg class="icon" style="color:var(--primary)"><use href="#i-bulb"/></svg>
-              <span data-i18n="overview.insights"></span>
-            </h2>
-            <span class="card__hint" id="insights-meta" data-i18n="overview.insights.hint"></span>
-          </div>
-          <div id="insights-list"></div>
-        </div>
-
         <div class="grid grid--2 section">
           <div class="card">
             <div class="card__head"><h2 class="card__title" data-i18n="chart.weekly"></h2></div>
@@ -191,6 +180,18 @@
           <div id="chart-forecast" class="chart-canvas"></div>
           <div class="caption" id="cap-forecast"></div>
           <div id="forecast-by-cat" class="forecast-cats"></div>
+        </div>
+
+        <!-- Insights moved to the bottom of the overview, after the data charts -->
+        <div class="card section insights-card">
+          <div class="card__head">
+            <h2 class="card__title">
+              <svg class="icon" style="color:var(--primary)"><use href="#i-bulb"/></svg>
+              <span data-i18n="overview.insights"></span>
+            </h2>
+            <span class="card__hint" id="insights-meta" data-i18n="overview.insights.hint"></span>
+          </div>
+          <div id="insights-list"></div>
         </div>
       </section>
 
@@ -242,6 +243,17 @@
           </div>
           <div id="chart-matrix" class="chart-canvas chart-canvas--short"></div>
           <div class="caption" id="cap-matrix"></div>
+        </div>
+
+        <div class="card section">
+          <div class="card__head">
+            <h2 class="card__title">
+              <svg class="icon" style="color:var(--primary)"><use href="#i-bulb"/></svg>
+              <span data-i18n="chart.linked"></span>
+            </h2>
+            <span class="card__hint" data-i18n="chart.linked.hint"></span>
+          </div>
+          <div id="linked-list"></div>
         </div>
 
         <div class="card section">
@@ -518,6 +530,12 @@ const I18N = {
     'examples.q2':'هل هناك تصاعد في شكاوى السداد؟',
     'examples.q3':'ما الفئات الأقل شيوعاً ولماذا قد نتجاهلها؟',
     'na':'—','of':'من','records':'سجل','request':'طلب',
+    'chart.linked':'الطلبات المترابطة دلالياً',
+    'chart.linked.hint':'يجمع الذكاء الاصطناعي الطلبات المتشابهة في القصد ويلخّص ما يطلبه المستفيد فعلاً.',
+    'linked.intent':'ما يطلبه المستفيد',
+    'linked.response':'الإجراء الموصى به للموظف',
+    'linked.examples':'أمثلة',
+    'linked.tickets':'فتح كل التذاكر',
     'pop.title':'مقارنة آخر أسبوعين بالأسبوعين السابقين',
     'pop.total':'إجمالي الطلبات','pop.complaints':'الشكاوى','pop.high':'الخطورة العالية',
     'pop.empty':'لا تتوفر بيانات كافية للمقارنة',
@@ -608,6 +626,12 @@ const I18N = {
     'examples.q2':'Is there an upward trend in payment complaints?',
     'examples.q3':'Which categories are least common and why might we deprioritize them?',
     'na':'—','of':'of','records':'records','request':'requests',
+    'chart.linked':'Semantically linked requests',
+    'chart.linked.hint':'AI groups requests by underlying intent and synthesises what the beneficiary actually wants.',
+    'linked.intent':'What the beneficiary wants',
+    'linked.response':'Recommended employee response',
+    'linked.examples':'Examples',
+    'linked.tickets':'Open all tickets',
     'pop.title':'Last two weeks vs the prior two',
     'pop.total':'Total requests','pop.complaints':'Complaints','pop.high':'High severity',
     'pop.empty':'Not enough data to compare',
@@ -676,6 +700,22 @@ const escapeHtml = (s) => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;'
 
 const SEV_KEY = (v) => v === 'عالية' ? 'sev.high' : v === 'متوسطة' ? 'sev.med' : 'sev.low';
 const SEV_LABEL = (v) => t(SEV_KEY(v));
+
+// Category translation — AR data values mapped to EN for display
+const CATEGORY_EN = {
+  'شكوى':'Complaint',
+  'استفسار':'Inquiry',
+  'اقتراح':'Suggestion',
+  'دعم فني':'Tech support',
+  'خدمة مراجع':'Reviewer service',
+};
+const catDisplay = (c) => LANG === 'en' ? (CATEGORY_EN[c] || c) : c;
+// Pick AR or EN field on a record-shaped object
+const pickLang = (obj, base) => {
+  if (!obj) return '';
+  const k = LANG === 'en' ? base + '_en' : base + '_ar';
+  return obj[k] || obj[base + '_ar'] || obj[base] || '';
+};
 
 /* ====== State + plotly helpers ========================================= */
 const DGA = {
@@ -860,9 +900,12 @@ async function renderTicket(requestId) {
   }
   const rec = data.record, tk = data.ticket;
   const sevClass = rec.severity==='عالية'?'pill--high':rec.severity==='متوسطة'?'pill--med':'pill--low';
-  qs('#tk-title').textContent = `#${nm(rec.request_id)} · ${rec.category}`;
+  const recTopic = pickLang(rec, 'topic_label');
+  const recReason = pickLang(rec, 'severity_reason');
+  const recAction = pickLang(rec, 'recommended_action');
+  qs('#tk-title').textContent = `#${nm(rec.request_id)} · ${catDisplay(rec.category)}`;
   qs('#tk-chips').innerHTML = `<span class="pill ${sevClass}">${SEV_LABEL(rec.severity)}</span>
-                               <span class="pill pill--ghost">${escapeHtml(rec.topic_label||'—')}</span>`;
+                               <span class="pill pill--ghost">${escapeHtml(recTopic||'—')}</span>`;
 
   const statusOptions = state.statuses.map(s =>
     `<option value="${s.id}" ${s.id===tk.status?'selected':''}>${LANG==='ar'?s.label_ar:s.label_en}</option>`
@@ -919,7 +962,9 @@ async function renderTicket(requestId) {
 
     <div class="tk-rec-action">
       <div class="tk-record__label">${t('ticket.recommended')}</div>
-      <div>${escapeHtml(rec.recommended_action || '')}</div>
+      <div>${escapeHtml(recAction || '')}</div>
+      ${recReason ? `<div class="tk-record__why" style="margin-top:8px;color:var(--ink-muted);font-size:var(--fs-sm)">
+        <strong>${t('drawer.severity_reason')}:</strong> ${escapeHtml(recReason)}</div>` : ''}
     </div>
 
     <div class="tk-activity">
@@ -1300,7 +1345,7 @@ async function refreshAll() {
   if (empty) { showFilteredEmpty(); return; }
   const [k, weekly, cats, sev, ins, fc] = await Promise.all([
     api('/api/kpis'), api('/api/weekly'), api('/api/categories'),
-    api('/api/severity'), api('/api/insights'), api('/api/forecast?horizon=2'),
+    api('/api/severity'), api('/api/insights?language=' + LANG), api('/api/forecast?horizon=2'),
   ]);
   Object.assign(state.cache, { kpis:k, weekly, cats, sev, fc });
   renderKpis(k);
@@ -1311,18 +1356,20 @@ async function refreshAll() {
   renderForecast(fc);
   loadPeriodComparison();
 
-  const [topics, weeklyByCat, alerts, sevWeekly, momentum, matrix, recur] = await Promise.all([
-    api('/api/topics?top_n=10'), api('/api/weekly_by_cat'), api('/api/alerts'),
+  const [topics, weeklyByCat, alerts, sevWeekly, momentum, matrix, recur, linked] = await Promise.all([
+    api('/api/topics?top_n=10'), api('/api/weekly_by_cat'), api('/api/alerts?language=' + LANG),
     api('/api/severity_weekly'), api('/api/topic_momentum'), api('/api/category_matrix'),
     api('/api/recurring_cases?min_repeats=3&lookback_days=120'),
+    api('/api/related_groups?language=' + LANG + '&min_size=5&top_n=6'),
   ]);
-  Object.assign(state.cache, { topics, weeklyByCat, alerts, sevW:sevWeekly, momentum, matrix, recur });
+  Object.assign(state.cache, { topics, weeklyByCat, alerts, sevW:sevWeekly, momentum, matrix, recur, linked });
   renderTopics(topics);
   renderWeeklyByCat(weeklyByCat);
   renderAlerts(alerts);
   renderSeverityWeekly(sevWeekly);
   renderMomentum(momentum);
   renderMatrix(matrix);
+  renderLinked(linked);
   renderRecurring(recur);
   await loadActions();
   bindPlotlyClicks();
@@ -1674,6 +1721,45 @@ function renderMatrix(d) {
   }));
   qs('#cap-matrix').textContent = t('caption.matrix', { pair: `${peak.cat} × ${SEV_LABEL(peak.sev)}` });
 }
+function renderLinked(groups) {
+  const root = qs('#linked-list');
+  if (!groups || !groups.length) {
+    root.innerHTML = `<div class="empty"><p>${t('drawer.empty')}</p></div>`;
+    return;
+  }
+  root.innerHTML = groups.map(g => {
+    const cat = LANG === 'en' ? (g.top_category_en || g.top_category) : g.top_category;
+    const examplesHtml = (g.examples || []).map(e => `
+      <div class="insight__ex" data-id="${e.id}">
+        <span class="insight__ex-id">#${nm(e.id)}</span>
+        <span class="insight__ex-body">${escapeHtml(e.body || '')}</span>
+      </div>`).join('');
+    return `<div class="linked">
+      <div class="linked__head">
+        <span class="pill pill--low">${fmtInt(g.count)}</span>
+        <span class="linked__cat">${escapeHtml(cat || '—')}</span>
+        <span class="linked__hpct">${fmtPct(g.high_pct)}</span>
+      </div>
+      <div class="linked__row">
+        <span class="linked__label">${t('linked.intent')}</span>
+        <div class="linked__txt">${escapeHtml(g.intent || '')}</div>
+      </div>
+      <div class="linked__row">
+        <span class="linked__label linked__label--act">${t('linked.response')}</span>
+        <div class="linked__txt">${escapeHtml(g.employee_response || '')}</div>
+      </div>
+      <div class="linked__examples">
+        <div class="insight__examples-label">${t('linked.examples')}</div>
+        <div class="insight__examples-list">${examplesHtml}</div>
+      </div>
+    </div>`;
+  }).join('');
+  qsa('#linked-list .insight__ex').forEach(el => el.addEventListener('click', () => {
+    const id = parseInt(el.dataset.id, 10);
+    if (id) openTicket(id);
+  }));
+}
+
 function renderRecurring(rows) {
   const root = qs('#recurring-list');
   if (!rows.length) { root.innerHTML = `<div class="empty"><p>${t('drawer.empty')}</p></div>`; return; }
@@ -1690,15 +1776,18 @@ function renderRecurring(rows) {
 function renderAlerts(list) {
   const root = qs('#alerts-list');
   if (!list.length) { root.innerHTML = `<div class="empty"><p>${t('drawer.empty')}</p></div>`; return; }
-  root.innerHTML = list.slice(0,12).map(a => `
+  root.innerHTML = list.slice(0,12).map(a => {
+    const valueDisplay = a.dimension === 'category' ? catDisplay(a.value) : a.value;
+    return `
     <div class="alert ${a.severity==='عالية'?'alert--high':''} drillable" data-cat="${a.dimension==='category'?escapeHtml(a.value):''}" data-topic="${a.dimension==='topic_label'?escapeHtml(a.value):''}" data-week="${a.week_start}">
       <div class="alert__title">
         <span class="pill ${a.severity==='عالية'?'pill--high':'pill--med'}">${SEV_LABEL(a.severity)}</span>
-        <span>${escapeHtml(a.value)} — +${fmtInt(a.count)}</span>
+        <span>${escapeHtml(valueDisplay)} — +${fmtInt(a.count)}</span>
       </div>
       <div class="alert__meta">${fmtDate(a.week_start)} · ${LANG==='ar'?'متوسط تاريخي':'historic mean'} ${fmtInt(Math.round(a.baseline_mean))}</div>
       <div class="alert__body">${escapeHtml(a.suggested_action)}</div>
-    </div>`).join('');
+    </div>`;
+  }).join('');
   qsa('.alert', root).forEach(el => el.addEventListener('click', () => {
     const opts = { title: el.querySelector('.alert__title span:last-child').textContent };
     if (el.dataset.cat) opts.category = el.dataset.cat;
@@ -1721,7 +1810,7 @@ async function loadActions() {
     return `<tr class="drillable" data-id="${r.request_id}">
       <td class="num">#${nm(r.request_id)}</td>
       <td>${escapeHtml(r.body || t('na'))}</td>
-      <td>${escapeHtml(r.category)}</td>
+      <td>${escapeHtml(catDisplay(r.category))}</td>
       <td><span class="pill ${sevClass}">${SEV_LABEL(r.severity)}</span></td>
       <td><span class="pill ${tColor}">${escapeHtml(statusLabel(tStatus))}${cmt}</span></td>
       <td>${escapeHtml(userLabel(r.ticket_assignee))}</td>
