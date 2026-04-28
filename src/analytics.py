@@ -1082,6 +1082,219 @@ _TXT = {
 }
 
 
+def dashboard_ai_summary(df: pd.DataFrame, lang: str = "ar") -> dict:
+    """Narrative summary of the current slice — what the data says, in
+    a few sentences, plus 3-5 highlight bullets the user should know."""
+    if df.empty:
+        msg = ("لا توجد بيانات ضمن النطاق الحالي." if lang != "en"
+               else "No data in the current scope.")
+        return {"summary": msg, "highlights": []}
+
+    from src.llm_client import CATEGORY_EN, SEVERITY_EN
+
+    k = compute_kpis(df)
+    by_cat = k.by_category
+    top_cat_ar = by_cat.index[0] if not by_cat.empty else "—"
+    top_cat = (CATEGORY_EN.get(top_cat_ar, top_cat_ar) if lang == "en" else top_cat_ar)
+    top_share = (by_cat.iloc[0] / k.total * 100) if k.total else 0
+    n_cats = int(by_cat.size)
+
+    topics = top_recurring_topics(df, top_n=2)
+    top_topic_ar = topics.iloc[0]["topic_label"] if not topics.empty else "—"
+    top_topic = (_localize_value(df, top_topic_ar, "topic_label", lang)
+                 if not topics.empty else top_topic_ar)
+    top_topic_count = int(topics.iloc[0]["count"]) if not topics.empty else 0
+
+    fc = forecast_weekly(df, horizon=1)
+    next_week = int(round(fc["forecast"]["y"][0])) if fc["forecast"]["y"] else None
+
+    recur = find_recurring_cases(df, min_repeats=4, lookback_days=60)
+    top_recur = recur.iloc[0] if not recur.empty else None
+
+    mom = topic_momentum(df, lookback_weeks=4, top_n=3)
+    rising_topic = None
+    rising_growth = None
+    if not mom.empty:
+        r0 = mom.iloc[0]
+        if r0["growth_pct"] > 25:
+            rising_topic = _localize_value(df, r0["topic_label"], "topic_label", lang)
+            rising_growth = int(r0["growth_pct"])
+
+    if lang == "en":
+        sentences = [
+            f"You handled {k.total:,} requests across {n_cats} categories.",
+            f"«{top_cat}» dominates at {top_share:.0f}% of volume.",
+            f"{k.pct_high_severity:.0f}% are flagged high-severity, "
+            f"concentrated in «{top_topic}» ({top_topic_count} requests).",
+        ]
+        if next_week is not None:
+            sentences.append(f"Forecast for next week: ~{next_week} requests.")
+    else:
+        sentences = [
+            f"تمّت معالجة {k.total:,} طلب في الفترة موزّعة على {n_cats} فئة.",
+            f"الفئة المسيطرة «{top_cat}» بنسبة {top_share:.0f}٪ من الحجم.",
+            f"{k.pct_high_severity:.0f}٪ منها بخطورة عالية، "
+            f"يتركّز معظمها في موضوع «{top_topic}» ({top_topic_count} طلب).",
+        ]
+        if next_week is not None:
+            sentences.append(f"التنبؤ للأسبوع القادم: نحو {next_week} طلب.")
+
+    summary = " ".join(sentences)
+
+    highlights: list[dict] = []
+    if rising_topic:
+        highlights.append({
+            "kind": "rising",
+            "text": (f"«{rising_topic}» rising +{rising_growth}% in the last 4 weeks"
+                     if lang == "en" else
+                     f"«{rising_topic}» في تصاعد +{rising_growth}٪ خلال آخر ٤ أسابيع"),
+        })
+    if top_recur is not None and int(top_recur["count"]) >= 5:
+        ph = str(top_recur["phrase"])[:50]
+        highlights.append({
+            "kind": "recurring",
+            "text": (f"«{ph}» repeated {int(top_recur['count'])} times — likely repeat issue"
+                     if lang == "en" else
+                     f"«{ph}» متكرر {int(top_recur['count'])} مرة — على الأرجح مشكلة منهجية"),
+        })
+    if k.pct_high_severity >= 25:
+        highlights.append({
+            "kind": "risk",
+            "text": (f"{k.pct_high_severity:.0f}% of total flagged high — review escalation policy"
+                     if lang == "en" else
+                     f"{k.pct_high_severity:.0f}٪ من الإجمالي مصنّفة عالية الخطورة — راجع سياسة التصعيد"),
+        })
+    if next_week is not None:
+        highlights.append({
+            "kind": "forecast",
+            "text": (f"Plan staffing for ~{next_week} requests next week"
+                     if lang == "en" else
+                     f"خطّط الطاقم لاستقبال نحو {next_week} طلب الأسبوع القادم"),
+        })
+
+    return {"summary": summary, "highlights": highlights[:4]}
+
+
+def ticket_ai_view(record: dict, df: pd.DataFrame, lang: str = "ar") -> dict:
+    """Per-ticket AI summary + suggestions + recommendation.
+    `record` is the row dict; `df` is the full enriched dataset for
+    context (similar-tickets count, etc.)."""
+    from src.llm_client import CATEGORY_EN, SEVERITY_EN
+
+    body = (record.get("body") or "").strip()
+    cat_ar = record.get("category") or ""
+    cat = (CATEGORY_EN.get(cat_ar, cat_ar) if lang == "en" else cat_ar)
+    sev_ar = record.get("severity") or ""
+    sev = (SEVERITY_EN.get(sev_ar, sev_ar) if lang == "en" else sev_ar)
+    topic_ar = (record.get("topic_label_ar") or record.get("topic_label") or "")
+    topic = (record.get("topic_label_en") if lang == "en" else topic_ar) or topic_ar
+    reason = (record.get(f"severity_reason_{lang}")
+              or record.get("severity_reason_ar") or "")
+    action = (record.get(f"recommended_action_{lang}")
+              or record.get("recommended_action_ar") or "")
+
+    # Similar-ticket counts and sample IDs
+    similar_count = 0
+    similar_ids: list[int] = []
+    if topic_ar and "topic_label" in df.columns:
+        sim = df[(df["topic_label"] == topic_ar)
+                 & (df["request_id"] != record.get("request_id"))]
+        similar_count = int(len(sim))
+        similar_ids = sim["request_id"].head(3).astype(int).tolist()
+
+    # Domain-specific suggestions based on topic
+    suggestions = _ticket_suggestions(topic_ar, cat_ar, body, lang)
+
+    # Compose the summary paragraph
+    excerpt = body if len(body) <= 70 else body[:70].rstrip() + "…"
+    if lang == "en":
+        sim_str = (f"This is one of {similar_count} similar requests about «{topic}»."
+                   if similar_count else "No closely-similar requests found in the dataset.")
+        summary = (
+            f"This is a {cat.lower()} request from the beneficiary about «{excerpt}». "
+            f"Severity: {sev} — {reason} {sim_str}"
+        )
+    else:
+        sim_str = (f"يوجد {similar_count} طلب مشابه في موضوع «{topic}»."
+                   if similar_count else "لا توجد طلبات مشابهة قريبة في البيانات.")
+        summary = (
+            f"طلب من نوع «{cat}» يخصّ «{excerpt}». "
+            f"الخطورة: {sev} — {reason} {sim_str}"
+        )
+
+    return {
+        "summary": summary.strip(),
+        "suggestions": suggestions,
+        "recommendation": action,
+        "similar_count": similar_count,
+        "similar_ids": similar_ids,
+    }
+
+
+def _ticket_suggestions(topic_ar: str, cat_ar: str, body: str, lang: str) -> list[str]:
+    """Return up to 4 domain-specific suggestions for a ticket. Mostly
+    'questions to ask the beneficiary' or 'data points to verify'."""
+    t = (topic_ar or "")
+    items: list[tuple[str, str]] = []  # (ar, en)
+
+    def _add(ar: str, en: str) -> None:
+        items.append((ar, en))
+
+    # Repayment / loan deduction
+    if "تعثّر" in t or "تعثر" in t or "السداد" in t:
+        _add("اطلب من المستفيد توضيح سبب التعثّر (ظرف مؤقت / دائم).",
+             "Ask the beneficiary to explain the cause of the default (temporary / persistent).")
+        _add("راجع تاريخ الأقساط المتأخرة في النظام قبل الرد.",
+             "Check the late-instalments history in the system before replying.")
+        _add("اعرض خطة جدولة مرنة وسجّل الموافقة على المسار.",
+             "Offer a flexible repayment plan and log the chosen path.")
+    elif "خصم" in t:
+        _add("تحقّق من سجل الخصم لآخر دورتين على الحساب.",
+             "Verify the deduction log for the last two cycles on the account.")
+        _add("قارن المبلغ المخصوم مع القسط المتعاقد عليه.",
+             "Compare the deducted amount against the contracted instalment.")
+        _add("اسأل المستفيد: هل ما يطلبه مراجعة المبلغ، إيقاف الخصم، أم إعادة جدولة؟",
+             "Ask the beneficiary: are they requesting an amount review, a deduction halt, or rescheduling?")
+    elif "احتيال" in t:
+        _add("صعّد فوراً إلى إدارة المخاطر والامتثال.",
+             "Escalate to risk and compliance immediately.")
+        _add("جمّد المعاملات المعلّقة حتى التحقق.",
+             "Freeze pending transactions until verification.")
+        _add("اطلب من المستفيد قائمة العمليات المشبوهة بالتاريخ والمبلغ.",
+             "Ask the beneficiary for a list of suspect transactions with dates and amounts.")
+    elif "قرض" in t or "تمويل" in t or cat_ar == "خدمة مراجع":
+        _add("اطلب نوع التمويل المرغوب وقيمة المشروع التقديرية.",
+             "Ask for the desired financing product and the estimated project value.")
+        _add("تحقّق من اكتمال ملف المستفيد قبل الإحالة.",
+             "Verify the beneficiary's file is complete before routing.")
+        _add("شارك جدول الأهلية للمنتجات الممكنة.",
+             "Share the eligibility table for available products.")
+    elif "تأخر" in t or "delay" in t.lower():
+        _add("تتبّع الطلب لدى الجهة المختصة وحدّد سبب التأخير.",
+             "Trace the request through the responsible unit and identify the cause of the delay.")
+        _add("اتصل بالمستفيد بنتيجة المراجعة قبل نهاية اليوم التالي.",
+             "Call the beneficiary with the review outcome before end of next business day.")
+    elif "تحديث" in t and "بيانات" in t:
+        _add("وجّه المستفيد إلى مسار التحديث الذاتي على البوابة.",
+             "Direct the beneficiary to the self-service update flow on the portal.")
+        _add("تحقّق من مزامنة القنوات بعد التحديث.",
+             "Verify cross-channel sync after the update.")
+    elif "شكاو" in t or cat_ar == "شكوى":
+        _add("اطلب من المستفيد تفاصيل المشكلة والتاريخ والمبلغ إن وُجد.",
+             "Ask the beneficiary for details, date, and amount (if any).")
+        _add("اتصل استباقياً قبل تصعيد التذكرة.",
+             "Place a proactive call before escalating the ticket.")
+        _add("سجّل الشكوى في نظام الجودة لأغراض التحليل.",
+             "Log the complaint in the QA system for analytics purposes.")
+    else:
+        _add("اطلب من المستفيد تفاصيل أوضح حول طلبه.",
+             "Ask the beneficiary for clearer details about their request.")
+        _add("ابحث عن تذاكر مشابهة سابقة قبل الرد.",
+             "Search for similar prior tickets before replying.")
+
+    return [(en if lang == "en" else ar) for ar, en in items[:4]]
+
+
 def _localize_value(df: pd.DataFrame, value: str, dimension: str, lang: str) -> str:
     """Translate a category or topic value when rendering in English."""
     if lang != "en":

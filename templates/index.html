@@ -158,6 +158,26 @@
 
         <div class="grid grid--kpi section" id="kpi-grid"></div>
 
+        <div class="card section ai-card" id="ai-summary-card">
+          <div class="card__head">
+            <h2 class="card__title">
+              <span class="ai-badge">AI</span>
+              <span data-i18n="ai.summary.title"></span>
+            </h2>
+            <span class="card__hint" data-i18n="ai.summary.hint"></span>
+          </div>
+          <div id="ai-summary-text" class="ai-summary"></div>
+          <div id="ai-summary-highlights" class="ai-highlights"></div>
+        </div>
+
+        <div class="card section pipeline-card" id="pipeline-card">
+          <div class="card__head">
+            <h2 class="card__title" data-i18n="pipeline.title"></h2>
+            <span class="card__hint" data-i18n="pipeline.hint"></span>
+          </div>
+          <div class="pipeline-grid" id="pipeline-grid"></div>
+        </div>
+
         <div class="card section pop-card" id="pop-card" style="display:none">
           <div class="card__head">
             <h2 class="card__title" data-i18n="pop.title"></h2>
@@ -202,12 +222,23 @@
         <div class="card section insights-card">
           <div class="card__head">
             <h2 class="card__title">
-              <svg class="icon" style="color:var(--primary)"><use href="#i-bulb"/></svg>
+              <span class="ai-badge">AI</span>
               <span data-i18n="overview.insights"></span>
             </h2>
             <span class="card__hint" id="insights-meta" data-i18n="overview.insights.hint"></span>
           </div>
           <div id="insights-list"></div>
+        </div>
+
+        <div class="card section ai-card" id="ai-reco-card">
+          <div class="card__head">
+            <h2 class="card__title">
+              <span class="ai-badge">AI</span>
+              <span data-i18n="ai.reco.title"></span>
+            </h2>
+            <span class="card__hint" data-i18n="ai.reco.hint"></span>
+          </div>
+          <div id="ai-reco-list" class="ai-reco-list"></div>
         </div>
       </section>
 
@@ -494,7 +525,17 @@ const I18N = {
     'filters.toggle':'تحديد/إلغاء الكل','filters.reset':'إعادة تعيين',
     'filters.status':'حالة التذكرة','filters.assignee':'المسؤول','filters.unassigned':'غير مسنَد',
     'overview.title':'نظرة عامة','overview.subtitle':'مؤشرات أداء قنوات المشاركة والرؤى المستخلصة من بيانات المستفيدين خلال الفترة المحددة.',
-    'overview.insights':'رؤى عملية مقترحة','overview.insights.hint':'يحلّل النظام كامل البيانات لاستخراج توصيات قابلة للتنفيذ هذا الأسبوع.',
+    'overview.insights':'رؤى الذكاء الاصطناعي','overview.insights.hint':'يحلّل الذكاء الاصطناعي كامل البيانات لاستخراج رؤى قابلة للتنفيذ هذا الأسبوع.',
+    'ai.summary.title':'ملخّص الذكاء الاصطناعي',
+    'ai.summary.hint':'سرد مكثّف لما تقوله بياناتك خلال الفترة الحالية.',
+    'ai.reco.title':'توصيات الذكاء الاصطناعي',
+    'ai.reco.hint':'الإجراءات الأهم المستخلصة من الرؤى أعلاه — مرتّبة بأولوية الأثر.',
+    'pipeline.title':'حالة التذاكر',
+    'pipeline.hint':'حالة التذاكر الحالية موزّعة على مراحل المعالجة.',
+    'ai.ticket.summary':'ملخّص الذكاء الاصطناعي',
+    'ai.ticket.suggestions':'اقتراحات الذكاء الاصطناعي',
+    'ai.ticket.recommendation':'توصية الذكاء الاصطناعي',
+    'ai.ticket.similar':'تذاكر مشابهة',
     'patterns.title':'الأنماط والاتجاهات','patterns.subtitle':'الموضوعات المتكرّرة، اتجاهات الخطورة عبر الزمن، والموضوعات المتصاعدة في الفترة الأخيرة.',
     'alerts.title':'الإنذار المبكر','alerts.subtitle':'ارتفاعات غير معتادة في الفئات أو الموضوعات خلال آخر أسبوع، مع توصية تحسين استباقية.',
     'actions.title':'الإجراءات المقترحة','actions.subtitle':'تصنيف ذكي لكل طلب مع تبرير مستوى الخطورة وإجراء قابل للاعتماد.',
@@ -595,7 +636,17 @@ const I18N = {
     'filters.toggle':'Select / clear all','filters.reset':'Reset',
     'filters.status':'Ticket status','filters.assignee':'Assignee','filters.unassigned':'Unassigned',
     'overview.title':'Overview','overview.subtitle':'Channel performance KPIs and AI-derived insights from beneficiary submissions in the selected period.',
-    'overview.insights':'Actionable insights','overview.insights.hint':'AI scans all submissions to surface concrete actions for this week.',
+    'overview.insights':'AI insights','overview.insights.hint':'AI scans all submissions to surface concrete, evidence-backed insights for this week.',
+    'ai.summary.title':'AI summary',
+    'ai.summary.hint':'A concise narrative of what your data is telling you for the current scope.',
+    'ai.reco.title':'AI recommendations',
+    'ai.reco.hint':'The highest-impact actions extracted from the insights above.',
+    'pipeline.title':'Ticket pipeline',
+    'pipeline.hint':'Current ticket state across the workflow.',
+    'ai.ticket.summary':'AI summary',
+    'ai.ticket.suggestions':'AI suggestions',
+    'ai.ticket.recommendation':'AI recommendation',
+    'ai.ticket.similar':'Similar tickets',
     'patterns.title':'Patterns & trends','patterns.subtitle':'Recurring topics, severity trends over time, and rising themes in the recent period.',
     'alerts.title':'Early warning','alerts.subtitle':'Unusual spikes in categories or topics in the latest week, with proactive recommendations.',
     'actions.title':'Suggested actions','actions.subtitle':'AI-classified records with severity justification and an actionable next step.',
@@ -1024,8 +1075,25 @@ async function renderTicket(requestId) {
       </label>
     </div>
 
+    <div id="tk-ai-block" class="tk-ai">
+      <div class="tk-ai__header"><span class="ai-badge">AI</span>
+        <span data-i18n="ai.ticket.summary">${t('ai.ticket.summary')}</span></div>
+      <div id="tk-ai-summary" class="tk-ai__summary muted">…</div>
+
+      <div class="tk-ai__sub">
+        <span class="ai-badge ai-badge--sm">AI</span>
+        <span>${t('ai.ticket.suggestions')}</span>
+      </div>
+      <ul id="tk-ai-suggestions" class="tk-ai__list"></ul>
+
+      <div id="tk-ai-similar" class="tk-ai__similar"></div>
+    </div>
+
     <div class="tk-rec-action">
-      <div class="tk-record__label">${t('ticket.recommended')}</div>
+      <div class="tk-record__label">
+        <span class="ai-badge ai-badge--sm">AI</span>
+        ${t('ai.ticket.recommendation')}
+      </div>
       <div>${escapeHtml(recAction || '')}</div>
       ${recReason ? `<div class="tk-record__why" style="margin-top:8px;color:var(--ink-muted);font-size:var(--fs-sm)">
         <strong>${t('drawer.severity_reason')}:</strong> ${escapeHtml(recReason)}</div>` : ''}
@@ -1067,6 +1135,30 @@ async function renderTicket(requestId) {
     await renderTicket(requestId);
     await loadActions();
   });
+  // Load AI view (summary + suggestions + similar) — non-blocking
+  fetch('/api/ticket_ai/' + requestId + '?language=' + LANG)
+    .then(r => r.json())
+    .then(ai => {
+      qs('#tk-ai-summary').textContent = ai.summary || '';
+      qs('#tk-ai-suggestions').innerHTML = (ai.suggestions || [])
+        .map(s => `<li>${escapeHtml(s)}</li>`).join('');
+      const simEl = qs('#tk-ai-similar');
+      if (ai.similar_count && ai.similar_ids && ai.similar_ids.length) {
+        simEl.innerHTML = `<div class="tk-ai__sub" style="margin-top:var(--s-3)">
+          <span class="ai-badge ai-badge--sm">AI</span>
+          <span>${t('ai.ticket.similar')} · ${fmtInt(ai.similar_count)}</span></div>
+          <div class="tk-ai__similar-ids">` +
+          ai.similar_ids.map(id =>
+            `<button class="link-btn tk-ai__sim" data-id="${id}">#${nmId(id)}</button>`
+          ).join(' · ') + '</div>';
+        qsa('.tk-ai__sim', simEl).forEach(b => b.addEventListener('click', () => {
+          openTicket(parseInt(b.dataset.id, 10));
+        }));
+      } else {
+        simEl.innerHTML = '';
+      }
+    }).catch(() => {});
+
   qs('#tk-send').addEventListener('click', async () => {
     const text = qs('#tk-comment').value.trim();
     if (!text) return;
@@ -1462,16 +1554,21 @@ async function loadFiles() {
 async function refreshAll() {
   const empty = !state.meta || state.filters.categories.length === 0 || state.filters.severities.length === 0;
   if (empty) { showFilteredEmpty(); return; }
-  const [k, weekly, cats, sev, ins, fc] = await Promise.all([
+  const [k, weekly, cats, sev, ins, fc, aiSum, tStats] = await Promise.all([
     api('/api/kpis'), api('/api/weekly'), api('/api/categories'),
     api('/api/severity'), api('/api/insights?language=' + LANG), api('/api/forecast?horizon=2'),
+    api('/api/dashboard_summary?language=' + LANG),
+    fetch('/api/ticket_stats').then(r => r.json()).catch(() => null),
   ]);
-  Object.assign(state.cache, { kpis:k, weekly, cats, sev, fc });
+  Object.assign(state.cache, { kpis:k, weekly, cats, sev, fc, aiSum });
   renderKpis(k);
+  renderAISummary(aiSum);
+  renderPipeline(tStats);
   renderWeekly(weekly);
   renderCategories(cats);
   renderSeverity(sev);
   renderInsights(ins);
+  renderAIRecommendations(ins);
   renderForecast(fc);
   loadPeriodComparison();
 
@@ -1518,6 +1615,59 @@ function renderKpis(k) {
     <div class="kpi"><div class="kpi__label">${t('kpi.cats')}</div>
       <div class="kpi__value">${fmtInt(k.active_categories)}</div></div>`;
 }
+function renderAISummary(d) {
+  const elT = qs('#ai-summary-text');
+  const elH = qs('#ai-summary-highlights');
+  if (!d || !d.summary) {
+    elT.textContent = t('drawer.empty'); elH.innerHTML = ''; return;
+  }
+  elT.textContent = d.summary;
+  const hl = d.highlights || [];
+  elH.innerHTML = hl.map(h =>
+    `<div class="ai-h ai-h--${escapeHtml(h.kind)}">${escapeHtml(h.text)}</div>`
+  ).join('');
+}
+
+function renderPipeline(stats) {
+  const root = qs('#pipeline-grid');
+  if (!root || !stats) { if (root) root.innerHTML = ''; return; }
+  const order = ['open','in_progress','pending','resolved','closed'];
+  root.innerHTML = order.map(s => {
+    const cnt = stats[s] || 0;
+    const klass = statusColorClass(s);
+    return `<div class="pipe drillable" data-status="${s}">
+      <div class="pipe__count">${fmtInt(cnt)}</div>
+      <div class="pipe__label"><span class="pill ${klass}">${escapeHtml(statusLabel(s))}</span></div>
+    </div>`;
+  }).join('');
+  qsa('.pipe', root).forEach(el => el.addEventListener('click', () => {
+    qsa('#nav .nav__item').forEach(x => x.classList.remove('is-active'));
+    qs('#nav .nav__item[data-page="actions"]').classList.add('is-active');
+    qsa('.page').forEach(p => p.classList.toggle('is-visible', p.dataset.page === 'actions'));
+    state.page = 'actions';
+    qsa('#filter-status label.check').forEach(x =>
+      x.classList.toggle('is-on', x.dataset.val === el.dataset.status));
+    state.filters.statuses = [el.dataset.status];
+    scheduleRefresh();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }));
+}
+
+function renderAIRecommendations(d) {
+  const root = qs('#ai-reco-list');
+  const list = (d && d.insights) || [];
+  if (!list.length) { root.innerHTML = `<div class="empty"><p>${t('drawer.empty')}</p></div>`; return; }
+  root.innerHTML = list.map((it, i) => `
+    <div class="ai-reco">
+      <div class="ai-reco__num">${fmtInt(i+1)}</div>
+      <div class="ai-reco__body">
+        <div class="ai-reco__title">${escapeHtml(it.title)}</div>
+        <div class="ai-reco__action">${escapeHtml(it.action || '')}</div>
+        ${it.metric ? `<div class="ai-reco__metric"><span class="insight__tag insight__tag--met">${t('insight.tag.metric')}</span> ${escapeHtml(it.metric)}</div>` : ''}
+      </div>
+    </div>`).join('');
+}
+
 function renderInsights(d) {
   const list = d.insights || [];
   if (!list.length) { qs('#insights-list').innerHTML = `<div class="empty"><p>${t('drawer.empty')}</p></div>`; return; }

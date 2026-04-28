@@ -457,6 +457,28 @@ def qa(req: QARequest) -> dict:
 
 # ---------- corpus-level insights ----------
 
+@app.get("/api/dashboard_summary")
+def dashboard_summary(
+    date_from: Optional[date] = Query(None, alias="from"),
+    date_to: Optional[date] = Query(None, alias="to"),
+    category: Optional[list[str]] = Query(None),
+    severity: Optional[list[str]] = Query(None),
+    language: str = Query("ar"),
+) -> JSONResponse:
+    fdf = _params(date_from, date_to, category, severity)
+    return JSONResponse(analytics.dashboard_ai_summary(fdf, lang=language))
+
+
+@app.get("/api/ticket_ai/{request_id}")
+def ticket_ai(request_id: int, language: str = Query("ar")) -> dict:
+    df = _load_data()
+    rec_rows = df[df["request_id"] == request_id]
+    if rec_rows.empty:
+        raise HTTPException(status_code=404, detail="record not found")
+    rec = rec_rows.iloc[0].to_dict()
+    return analytics.ticket_ai_view(rec, df, lang=language)
+
+
 @app.get("/api/insights")
 def insights(
     date_from: Optional[date] = Query(None, alias="from"),
