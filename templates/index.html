@@ -47,6 +47,7 @@
         <span data-i18n="action.upload"></span>
       </button>
       <span id="health-pill" class="pill pill--ghost"><span class="pill__dot"></span> <span data-i18n="status.loading"></span></span>
+      <span id="dq-pill" class="pill pill--ghost" style="display:none"></span>
     </div>
   </header>
 
@@ -251,6 +252,18 @@
           </div>
         </div>
 
+        <div class="card section ai-card">
+          <div class="card__head">
+            <h2 class="card__title">
+              <span class="ai-badge">AI</span>
+              <span data-i18n="ai.patterns.summary"></span>
+            </h2>
+            <span class="card__hint" data-i18n="ai.patterns.summary.hint"></span>
+          </div>
+          <div id="ai-patterns-summary" class="ai-summary"></div>
+          <div id="ai-patterns-highlights" class="ai-highlights"></div>
+        </div>
+
         <div class="card section">
           <div class="card__head">
             <h2 class="card__title" data-i18n="chart.topics"></h2>
@@ -314,6 +327,17 @@
           </div>
           <div id="recurring-list"></div>
         </div>
+
+        <div class="card section ai-card">
+          <div class="card__head">
+            <h2 class="card__title">
+              <span class="ai-badge">AI</span>
+              <span data-i18n="ai.patterns.reco"></span>
+            </h2>
+            <span class="card__hint" data-i18n="ai.patterns.reco.hint"></span>
+          </div>
+          <div id="ai-patterns-reco" class="ai-reco-list"></div>
+        </div>
       </section>
 
       <!-- =================== ALERTS =================== -->
@@ -352,7 +376,7 @@
                   <th data-i18n="col.id"></th>
                   <th data-i18n="col.body"></th>
                   <th data-i18n="col.category"></th>
-                  <th data-i18n="col.severity"></th>
+                  <th><span class="ai-badge ai-badge--sm">AI</span><span data-i18n="col.severity"></span></th>
                   <th data-i18n="ticket.column"></th>
                   <th data-i18n="ticket.assignee"></th>
                   <th data-i18n="col.closed"></th>
@@ -526,6 +550,12 @@ const I18N = {
     'filters.status':'حالة التذكرة','filters.assignee':'المسؤول','filters.unassigned':'غير مسنَد',
     'overview.title':'نظرة عامة','overview.subtitle':'مؤشرات أداء قنوات المشاركة والرؤى المستخلصة من بيانات المستفيدين خلال الفترة المحددة.',
     'overview.insights':'رؤى الذكاء الاصطناعي','overview.insights.hint':'يحلّل الذكاء الاصطناعي كامل البيانات لاستخراج رؤى قابلة للتنفيذ هذا الأسبوع.',
+    'ai.patterns.summary':'ملخّص الذكاء الاصطناعي للأنماط',
+    'ai.patterns.summary.hint':'قراءة موجزة لما تكشفه الأنماط في الفترة الحالية.',
+    'ai.patterns.reco':'توصيات الذكاء الاصطناعي للأنماط',
+    'ai.patterns.reco.hint':'إجراءات أولوية مستخلصة من الموضوعات المتكرّرة والمتصاعدة.',
+    'ai.dq.imputed':'تنبيه جودة البيانات',
+    'ai.dq.imputed.hint':'{n} طلب من أصل {tot} في الملف لا يحملون تاريخ إغلاق — تمّ افتراض تاريخ ليُحتسبوا في التحليلات.',
     'ai.summary.title':'ملخّص الذكاء الاصطناعي',
     'ai.summary.hint':'سرد مكثّف لما تقوله بياناتك خلال الفترة الحالية.',
     'ai.reco.title':'توصيات الذكاء الاصطناعي',
@@ -637,6 +667,12 @@ const I18N = {
     'filters.status':'Ticket status','filters.assignee':'Assignee','filters.unassigned':'Unassigned',
     'overview.title':'Overview','overview.subtitle':'Channel performance KPIs and AI-derived insights from beneficiary submissions in the selected period.',
     'overview.insights':'AI insights','overview.insights.hint':'AI scans all submissions to surface concrete, evidence-backed insights for this week.',
+    'ai.patterns.summary':'AI summary of patterns',
+    'ai.patterns.summary.hint':'A concise read of what the patterns reveal for this period.',
+    'ai.patterns.reco':'AI recommendations from patterns',
+    'ai.patterns.reco.hint':'Priority actions distilled from recurring and rising topics.',
+    'ai.dq.imputed':'Data quality notice',
+    'ai.dq.imputed.hint':'{n} of {tot} requests in the file are missing a close date — an imputed date was used so they still appear in analytics.',
     'ai.summary.title':'AI summary',
     'ai.summary.hint':'A concise narrative of what your data is telling you for the current scope.',
     'ai.reco.title':'AI recommendations',
@@ -769,6 +805,12 @@ function nmId(n) { // raw digits — no thousand separators (used for IDs)
   const s = String(n);
   return LANG === 'ar' ? toAr(s) : s;
 }
+// Render an ID with the # symbol always to the LEFT of the digits, even
+// in RTL contexts. We isolate the whole token as LTR so the bidi engine
+// doesn't reorder the # to the visual right of the number.
+function hashId(n) {
+  return `<span dir="ltr" class="id-tag">#${nmId(n)}</span>`;
+}
 function fmtInt(n) { return nm(n); }
 function fmtPct(n) {
   if (n == null) return t('na');
@@ -875,6 +917,17 @@ async function bootstrap() {
   }
 
   state.meta = await fetch('/api/meta').then(r=>r.json());
+  // Surface data-quality if any rows had imputed dates
+  const dq = state.meta.data_quality || {};
+  if (dq.imputed_dates && dq.imputed_dates > 0) {
+    const pill = qs('#dq-pill');
+    if (pill) {
+      pill.style.display = '';
+      pill.className = 'pill pill--med';
+      pill.title = t('ai.dq.imputed.hint', { n: fmtInt(dq.imputed_dates), tot: fmtInt(dq.ingested) });
+      pill.innerHTML = `⚠ ${t('ai.dq.imputed')} ${fmtInt(dq.imputed_dates)}/${fmtInt(dq.ingested)}`;
+    }
+  }
   qs('#filter-from').value = state.meta.date_min;
   qs('#filter-to').value   = state.meta.date_max;
   qs('#filter-from').min = qs('#filter-to').min = state.meta.date_min;
@@ -994,7 +1047,7 @@ function closeTicket() {
 async function openTicket(requestId) {
   qs('#ticket-drawer').classList.add('is-open');
   qs('#tk-body').innerHTML = `<div class="drill-empty">${t('status.loading')}…</div>`;
-  qs('#tk-title').textContent = `#${nmId(requestId)}`;
+  qs('#tk-title').innerHTML = hashId(requestId);
   qs('#tk-chips').innerHTML = '';
   await renderTicket(requestId);
 }
@@ -1009,7 +1062,7 @@ async function renderTicket(requestId) {
   const recTopic = pickLang(rec, 'topic_label');
   const recReason = pickLang(rec, 'severity_reason');
   const recAction = pickLang(rec, 'recommended_action');
-  qs('#tk-title').textContent = `#${nmId(rec.request_id)} · ${catDisplay(rec.category)}`;
+  qs('#tk-title').innerHTML = `${hashId(rec.request_id)} · ${escapeHtml(catDisplay(rec.category))}`;
   qs('#tk-chips').innerHTML = `<span class="pill ${sevClass}">${SEV_LABEL(rec.severity)}</span>
                                <span class="pill pill--ghost">${escapeHtml(recTopic||'—')}</span>`;
 
@@ -1149,7 +1202,7 @@ async function renderTicket(requestId) {
           <span>${t('ai.ticket.similar')} · ${fmtInt(ai.similar_count)}</span></div>
           <div class="tk-ai__similar-ids">` +
           ai.similar_ids.map(id =>
-            `<button class="link-btn tk-ai__sim" data-id="${id}">#${nmId(id)}</button>`
+            `<button class="link-btn tk-ai__sim" data-id="${id}">${hashId(id)}</button>`
           ).join(' · ') + '</div>';
         qsa('.tk-ai__sim', simEl).forEach(b => b.addEventListener('click', () => {
           openTicket(parseInt(b.dataset.id, 10));
@@ -1423,7 +1476,7 @@ function renderDrillRows(data) {
         <div class="drill-row__head">
           <span class="pill ${sevClass}">${escapeHtml(SEV_LABEL(r.severity))}</span>
           <span class="drill-row__cat">${escapeHtml(r.category)}</span>
-          <span class="drill-row__id">#${nmId(r.request_id)}</span>
+          <span class="drill-row__id">${hashId(r.request_id)}</span>
           <span class="drill-row__id">${fmtDate(r.closed_at)}</span>
         </div>
         <div class="drill-row__body">${escapeHtml(r.body || t('na'))}</div>
@@ -1563,12 +1616,14 @@ async function refreshAll() {
   Object.assign(state.cache, { kpis:k, weekly, cats, sev, fc, aiSum });
   renderKpis(k);
   renderAISummary(aiSum);
+  renderPatternsAISummary(aiSum);
   renderPipeline(tStats);
   renderWeekly(weekly);
   renderCategories(cats);
   renderSeverity(sev);
   renderInsights(ins);
   renderAIRecommendations(ins);
+  renderPatternsAIReco(ins);
   renderForecast(fc);
   loadPeriodComparison();
 
@@ -1626,6 +1681,37 @@ function renderAISummary(d) {
   elH.innerHTML = hl.map(h =>
     `<div class="ai-h ai-h--${escapeHtml(h.kind)}">${escapeHtml(h.text)}</div>`
   ).join('');
+}
+
+function renderPatternsAISummary(d) {
+  const elT = qs('#ai-patterns-summary');
+  const elH = qs('#ai-patterns-highlights');
+  if (!elT || !d || !d.summary) { if (elT) elT.textContent = ''; if (elH) elH.innerHTML = ''; return; }
+  elT.textContent = d.summary;
+  const hl = d.highlights || [];
+  elH.innerHTML = hl.map(h =>
+    `<div class="ai-h ai-h--${escapeHtml(h.kind)}">${escapeHtml(h.text)}</div>`
+  ).join('');
+}
+
+function renderPatternsAIReco(d) {
+  const root = qs('#ai-patterns-reco');
+  if (!root) return;
+  const list = (d && d.insights) || [];
+  // Filter to only "patterns-flavored" insight kinds
+  const filtered = list.filter(it =>
+    ['risk','momentum','recurring','opportunity'].includes(it.kind || ''));
+  const items = filtered.length ? filtered : list;
+  if (!items.length) { root.innerHTML = `<div class="empty"><p>${t('drawer.empty')}</p></div>`; return; }
+  root.innerHTML = items.map((it, i) => `
+    <div class="ai-reco">
+      <div class="ai-reco__num">${fmtInt(i+1)}</div>
+      <div class="ai-reco__body">
+        <div class="ai-reco__title">${escapeHtml(it.title)}</div>
+        <div class="ai-reco__action">${escapeHtml(it.action || '')}</div>
+        ${it.metric ? `<div class="ai-reco__metric"><span class="insight__tag insight__tag--met">${t('insight.tag.metric')}</span> ${escapeHtml(it.metric)}</div>` : ''}
+      </div>
+    </div>`).join('');
 }
 
 function renderPipeline(stats) {
@@ -1691,7 +1777,7 @@ function renderInsights(d) {
           <div class="insight__examples-label">${t('insight.examples')}</div>
           <div class="insight__examples-list">
             ${it.examples.map(e => `<div class="insight__ex" data-id="${e.id}">
-                <span class="insight__ex-id">#${nmId(e.id)}</span>
+                <span class="insight__ex-id">${hashId(e.id)}</span>
                 <span class="insight__ex-body">${escapeHtml(e.body || '')}</span>
               </div>`).join('')}
           </div>
@@ -2109,7 +2195,7 @@ async function loadActions() {
     const tColor = statusColorClass(tStatus);
     const cmt = r.ticket_comments ? ` · 💬 ${nm(r.ticket_comments)}` : '';
     return `<tr class="drillable" data-id="${r.request_id}">
-      <td class="num">#${nmId(r.request_id)}</td>
+      <td class="num">${hashId(r.request_id)}</td>
       <td>${escapeHtml(r.body || t('na'))}</td>
       <td>${escapeHtml(catDisplay(r.category))}</td>
       <td><span class="pill ${sevClass}" title="${r.severity_overridden?'overridden':'AI'}">${SEV_LABEL(r.severity)}${r.severity_overridden?' ✎':''}</span></td>

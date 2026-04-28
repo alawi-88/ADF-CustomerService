@@ -182,6 +182,7 @@ def meta() -> dict:
     """Metadata used by the frontend to populate filter widgets."""
     df = _load_data()
     cats = sorted(df["category"].dropna().unique().tolist())
+    n_imputed = int(df["_date_missing"].sum()) if "_date_missing" in df.columns else 0
     return {
         "rows": int(len(df)),
         "date_min": str(df["closed_at"].min().date()),
@@ -190,6 +191,10 @@ def meta() -> dict:
         "categories_en": [llm_client.CATEGORY_EN.get(c, c) for c in cats],
         "severities":   analytics.SEVERITY_ORDER,
         "severities_en":[llm_client.SEVERITY_EN.get(s, s) for s in analytics.SEVERITY_ORDER],
+        "data_quality": {
+            "imputed_dates": n_imputed,
+            "ingested": int(len(df)),
+        },
     }
 
 

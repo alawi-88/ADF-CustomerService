@@ -59,6 +59,15 @@ def _load_one(path: Path) -> pd.DataFrame:
     df["closed_at"] = pd.to_datetime(df["closed_at"], errors="coerce")
     df["request_id"] = pd.to_numeric(df["request_id"], errors="coerce").astype("Int64")
     df["_source_file"] = path.name
+    # Track missing dates rather than silently dropping them. We still need a
+    # usable date for time-series rollups, so we impute with the max date in
+    # the file but flag the imputation so the UI can surface the count.
+    df["_date_missing"] = df["closed_at"].isna()
+    if df["_date_missing"].any():
+        max_date = df["closed_at"].max()
+        if pd.isna(max_date):
+            max_date = pd.Timestamp.now().normalize()
+        df.loc[df["_date_missing"], "closed_at"] = max_date
     return df
 
 
@@ -69,10 +78,13 @@ def load_all_raw(raw_dir: Path = RAW_DIR) -> pd.DataFrame:
     frames = [_load_one(p) for p in files]
     df = pd.concat(frames, ignore_index=True)
     before = len(df)
-    df = df.dropna(subset=["closed_at", "request_id"]).reset_index(drop=True)
+    # Only drop rows missing the unique ID — those cannot be uniquely tracked.
+    # Rows missing dates are kept (with imputed closed_at + _date_missing flag).
+    df = df.dropna(subset=["request_id"]).reset_index(drop=True)
     df = df.sort_values("closed_at").drop_duplicates("request_id", keep="last")
-    log.info("merged %d row(s) from %d file(s); kept %d unique after dedup",
-             before, len(files), len(df))
+    n_imputed = int(df.get("_date_missing", pd.Series(False, index=df.index)).sum())
+    log.info("merged %d row(s) from %d file(s); %d unique kept; %d had missing dates (imputed).",
+             before, len(files), len(df), n_imputed)
     return df.reset_index(drop=True)
 
 

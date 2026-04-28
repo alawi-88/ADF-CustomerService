@@ -820,6 +820,14 @@ body.lang-en .table th, body.lang-en .table td { text-align: left; }
 .upload-result--ok  { background: var(--success-bg); color: var(--success); border: 1px solid #BFE0C0; }
 .upload-result--err { background: var(--danger-bg);  color: var(--danger);  border: 1px solid #F2C1C5; }
 
+/* ID tag — # always to the LEFT of digits, even in RTL */
+.id-tag {
+  unicode-bidi: isolate;
+  direction: ltr;
+  display: inline-block;
+  font-feature-settings: "tnum";
+}
+
 /* AI badge & blocks ---------------------------------------------- */
 .ai-badge {
   display: inline-flex; align-items: center;
