@@ -40,7 +40,7 @@ from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
-from src import analytics, llm_client, prepare_data
+from src import analytics, llm_client, prepare_data, tickets
 
 log = logging.getLogger("app")
 
@@ -333,9 +333,13 @@ def records(
     start = (page - 1) * page_size
     page_df = fdf.iloc[start:start + page_size]
     rows = []
+    page_ids = [int(r["request_id"]) for _, r in page_df.iterrows()]
+    ticket_meta = tickets.get_tickets_summary(page_ids) if page_ids else {}
     for _, r in page_df.iterrows():
+        rid = int(r["request_id"])
+        tm = ticket_meta.get(rid, {})
         rows.append({
-            "request_id": int(r["request_id"]),
+            "request_id": rid,
             "category": r["category"],
             "body": r["body"],
             "topic_label": r["topic_label"],
@@ -343,6 +347,9 @@ def records(
             "severity_reason": r.get("severity_reason") or "",
             "recommended_action": r["recommended_action"],
             "closed_at": pd.Timestamp(r["closed_at"]).strftime("%Y-%m-%d %H:%M"),
+            "ticket_status":   tm.get("status", "open"),
+            "ticket_assignee": tm.get("assignee_id"),
+            "ticket_comments": tm.get("comments", 0),
         })
     return JSONResponse({
         "total": total,
@@ -570,3 +577,75 @@ def list_files() -> dict:
             "uploaded_at": datetime.utcfromtimestamp(st.st_mtime).isoformat() + "Z",
         })
     return {"files": items}
+
+
+# ---------- ticket management ----------
+
+@app.get("/api/users")
+def list_users() -> dict:
+    return {"users": tickets.USERS, "statuses": tickets.STATUSES}
+
+
+@app.get("/api/ticket/{request_id}")
+def get_ticket(request_id: int) -> dict:
+    """Return ticket state plus the underlying record (body, severity, etc.)."""
+    df = _load_data()
+    rec = df[df["request_id"] == request_id]
+    if rec.empty:
+        raise HTTPException(status_code=404, detail="record not found")
+    r = rec.iloc[0]
+    record = {
+        "request_id": int(r["request_id"]),
+        "category": r["category"],
+        "body": r["body"],
+        "topic_label": r["topic_label"],
+        "severity": r["severity"],
+        "severity_reason": r.get("severity_reason") or "",
+        "recommended_action": r["recommended_action"],
+        "closed_at": pd.Timestamp(r["closed_at"]).strftime("%Y-%m-%d %H:%M"),
+    }
+    return {"record": record, "ticket": tickets.get_ticket(request_id)}
+
+
+class StatusBody(BaseModel):
+    status: str
+    by_id: Optional[str] = None
+
+
+@app.post("/api/ticket/{request_id}/status")
+def ticket_status(request_id: int, body: StatusBody) -> dict:
+    try:
+        return tickets.set_status(request_id, body.status, body.by_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+
+class AssignBody(BaseModel):
+    assignee_id: Optional[str] = None
+    by_id: Optional[str] = None
+
+
+@app.post("/api/ticket/{request_id}/assign")
+def ticket_assign(request_id: int, body: AssignBody) -> dict:
+    try:
+        return tickets.set_assignee(request_id, body.assignee_id, body.by_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+
+class CommentBody(BaseModel):
+    author_id: str
+    body: str
+
+
+@app.post("/api/ticket/{request_id}/comment")
+def ticket_comment(request_id: int, body: CommentBody) -> dict:
+    try:
+        return tickets.add_comment(request_id, body.author_id, body.body)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+
+@app.get("/api/ticket_stats")
+def ticket_stats() -> dict:
+    return tickets.stats()

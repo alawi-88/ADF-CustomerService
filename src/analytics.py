@@ -681,6 +681,117 @@ def _examples_for(df: pd.DataFrame, n: int = 3, **filters) -> list[dict]:
     return out
 
 
+def _attribute_causes(df: pd.DataFrame, *, category: str | None = None,
+                      topic: str | None = None) -> list[dict]:
+    """Decompose 'why is this X concentrated/elevated?' into ranked causes.
+
+    Returns up to 3 hypothesised drivers with a probability % and a reason
+    text grounded in the data signals. The probabilities are not Bayesian —
+    they are share-of-evidence weights normalised to 100%, surfacing the
+    Pareto pattern the user explicitly asked for.
+    """
+    if df.empty:
+        return []
+
+    # Build the slice we are explaining
+    sl = df
+    if category: sl = sl[sl["category"] == category]
+    if topic:    sl = sl[sl["topic_label"] == topic]
+    if sl.empty:
+        return []
+
+    candidates: list[dict] = []
+
+    # Cause 1: dominant body phrase (recurring text)
+    if "body" in sl.columns:
+        norm = sl["body"].astype(str).str.strip().str.replace(r"\s+", " ", regex=True)
+        top_phrase = norm.value_counts().head(1)
+        if not top_phrase.empty:
+            phrase, n = top_phrase.index[0], int(top_phrase.iloc[0])
+            share = n / len(sl)
+            if n >= 3 and share >= 0.05:
+                candidates.append({
+                    "cause": f"تكرار النص ذاته «{phrase[:60]}»",
+                    "weight": share * 0.9,
+                    "evidence": f"{n} طلب من أصل {len(sl)} يحملون النص نفسه — يرجّح أن المصدر "
+                                "مستفيد متكرر أو مشكلة منهجية واحدة.",
+                })
+
+    # Cause 2: dominant topic within the slice
+    if topic is None and "topic_label" in sl.columns:
+        top_topic = sl["topic_label"].value_counts().head(1)
+        if not top_topic.empty:
+            tname, tn = top_topic.index[0], int(top_topic.iloc[0])
+            tshare = tn / len(sl)
+            if tshare >= 0.20:
+                candidates.append({
+                    "cause": f"تركّز في موضوع «{tname}»",
+                    "weight": tshare * 0.85,
+                    "evidence": f"{tn} طلب ({tshare*100:.0f}٪ من الشريحة) ينتمون لموضوع واحد — "
+                                "يرجّح أن المصدر مشكلة محدّدة في هذا المسار.",
+                })
+
+    # Cause 3: dominant category within the slice (when explaining a topic)
+    if category is None and "category" in sl.columns:
+        top_cat = sl["category"].value_counts().head(1)
+        if not top_cat.empty:
+            cn = int(top_cat.iloc[0])
+            cshare = cn / len(sl)
+            if cshare >= 0.50:
+                candidates.append({
+                    "cause": f"كل الطلبات تقريباً في فئة «{top_cat.index[0]}»",
+                    "weight": cshare * 0.7,
+                    "evidence": f"{cshare*100:.0f}٪ من الشريحة من فئة واحدة — التحدي تشغيلي "
+                                "في فريق هذه الفئة وليس عاماً.",
+                })
+
+    # Cause 4: high-severity signal keyword presence
+    sev_kw = ["متعسر", "تعثر", "متأخر", "تأخر", "إيقاف", "ايقاف", "خصم", "احتيال",
+              "رفض", "استرداد", "مستحقات"]
+    body_text = sl["body"].astype(str).str.cat(sep=" ")
+    hits = []
+    for kw in sev_kw:
+        c = body_text.count(kw)
+        if c >= 3:
+            hits.append((kw, c))
+    if hits:
+        hits.sort(key=lambda x: -x[1])
+        top_kw, top_c = hits[0]
+        share = top_c / len(sl)
+        candidates.append({
+            "cause": f"إشارات حساسة في النص (مثل «{top_kw}»)",
+            "weight": min(0.6, share * 0.6),
+            "evidence": f"كلمة «{top_kw}» وردت {top_c} مرة في الشريحة — تشير إلى "
+                        "مشكلة مالية/تشغيلية تستدعي التصعيد.",
+        })
+
+    # Cause 5: temporal concentration — same week or day
+    if "closed_at" in sl.columns and len(sl) >= 5:
+        days = pd.to_datetime(sl["closed_at"]).dt.date.value_counts()
+        if not days.empty:
+            top_day_count = int(days.iloc[0])
+            day_share = top_day_count / len(sl)
+            if day_share >= 0.30:
+                candidates.append({
+                    "cause": f"تركّز يومي ({days.index[0]})",
+                    "weight": day_share * 0.55,
+                    "evidence": f"{day_share*100:.0f}٪ من الشريحة سُجّلت في يوم واحد — "
+                                "يرجّح أن سبب الموجة حدث محدّد بذلك اليوم (تحديث نظام، إعلان، إلخ).",
+                })
+
+    if not candidates:
+        return []
+
+    # Normalise weights to probabilities, return top 3
+    candidates.sort(key=lambda c: -c["weight"])
+    candidates = candidates[:3]
+    total = sum(c["weight"] for c in candidates) or 1.0
+    for c in candidates:
+        c["probability"] = round(c["weight"] / total * 100.0, 0)
+        del c["weight"]
+    return candidates
+
+
 def rule_based_insights(df: pd.DataFrame) -> list[dict]:
     """Concrete, evidence-backed insights for financial-services CX.
 
@@ -701,8 +812,10 @@ def rule_based_insights(df: pd.DataFrame) -> list[dict]:
         unit, _ = _topic_action_map(a.value)
         if a.dimension == "category":
             ex = _examples_for(df, category=a.value)
+            causes = _attribute_causes(df, category=a.value)
         else:
             ex = _examples_for(df, topic_label=a.value)
+            causes = _attribute_causes(df, topic=a.value)
         evidence = (
             f"رصد النظام {a.count} طلب في «{a.value}» مقابل متوسط تاريخي "
             f"{a.baseline_mean:.0f} طلب/أسبوع."
@@ -713,6 +826,7 @@ def rule_based_insights(df: pd.DataFrame) -> list[dict]:
             "kind": "anomaly",
             "title": f"تنبيه: ارتفاع في «{a.value}»",
             "evidence": evidence,
+            "causes": causes,
             "action": f"تكليف ({unit}) بفحص الموجة فوراً. {a.suggested_action}",
             "metric": "عودة الحجم الأسبوعي إلى المتوسط التاريخي خلال أسبوعين.",
             "examples": ex,
@@ -724,6 +838,7 @@ def rule_based_insights(df: pd.DataFrame) -> list[dict]:
         r = bad.iloc[0]
         unit, action_body = _topic_action_map(r["topic_label"])
         ex = _examples_for(df, topic_label=r["topic_label"], severity="عالية")
+        causes = _attribute_causes(df, topic=r["topic_label"])
         out.append({
             "kind": "risk",
             "title": f"موضوع «{r['topic_label']}» يستنزف موارد الفريق",
@@ -731,6 +846,7 @@ def rule_based_insights(df: pd.DataFrame) -> list[dict]:
                 f"{int(r['count'])} طلب في الفترة، منها {r['high_pct']:.0f}٪ "
                 f"بخطورة عالية — أعلى تركيز خطورة بين الموضوعات."
             ),
+            "causes": causes,
             "action": f"إحالة المسار إلى ({unit}). {action_body}",
             "metric": f"خفض نسبة الخطورة العالية في الموضوع إلى ما دون 30٪ خلال 6 أسابيع.",
             "examples": ex,
@@ -743,6 +859,7 @@ def rule_based_insights(df: pd.DataFrame) -> list[dict]:
         r = rising.iloc[0]
         unit, action_body = _topic_action_map(r["topic_label"])
         ex = _examples_for(df, topic_label=r["topic_label"])
+        causes = _attribute_causes(df, topic=r["topic_label"])
         out.append({
             "kind": "momentum",
             "title": f"موضوع متصاعد: «{r['topic_label']}»",
@@ -750,6 +867,7 @@ def rule_based_insights(df: pd.DataFrame) -> list[dict]:
                 f"الطلبات ارتفعت من {int(r['prior'])} إلى {int(r['recent'])} "
                 f"(+{r['growth_pct']:.0f}٪) في آخر 4 أسابيع."
             ),
+            "causes": causes,
             "action": f"({unit}): {action_body}",
             "metric": "خفض الطلبات في هذا الموضوع بنسبة 30٪ خلال شهر.",
             "examples": ex,
@@ -763,6 +881,7 @@ def rule_based_insights(df: pd.DataFrame) -> list[dict]:
         topic_name = top_complaint_topic.index[0] if not top_complaint_topic.empty else "—"
         topic_count = int(top_complaint_topic.iloc[0]) if not top_complaint_topic.empty else 0
         ex = _examples_for(df, category="شكوى", topic_label=topic_name)
+        causes = _attribute_causes(df, category="شكوى")
         out.append({
             "kind": "complaints",
             "title": "نسبة الشكاوى تستحق إصلاحاً منهجياً",
@@ -770,6 +889,7 @@ def rule_based_insights(df: pd.DataFrame) -> list[dict]:
                 f"الشكاوى تمثّل {k.pct_complaints:.0f}٪ من إجمالي الطلبات "
                 f"({_count_in(df, 'شكوى')} طلب). أكبر مساهم: «{topic_name}» بـ{topic_count} شكوى."
             ),
+            "causes": causes,
             "action": (
                 f"تشكيل فريق سريع لمراجعة أسباب الشكاوى المرتبطة بـ«{topic_name}» "
                 "وإطلاق إصلاحات قصيرة المدى خلال أسبوعين."

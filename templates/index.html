@@ -37,6 +37,7 @@
       </div>
     </div>
     <div class="topbar__meta">
+      <select id="actor-select" class="actor-select" aria-label="Acting as"></select>
       <button id="btn-lang" class="btn btn--ghost btn--small" aria-label="Switch language">
         <svg class="icon"><use href="#i-globe"/></svg>
         <span id="lang-label">EN</span>
@@ -78,6 +79,15 @@
 
       <div class="sidebar__section">
         <div class="sidebar__label" data-i18n="filters.title"></div>
+
+        <div class="presets" id="presets">
+          <button class="preset" data-preset="7"   data-i18n="preset.7d"></button>
+          <button class="preset" data-preset="30"  data-i18n="preset.30d"></button>
+          <button class="preset" data-preset="90"  data-i18n="preset.90d"></button>
+          <button class="preset" data-preset="this_month" data-i18n="preset.thisMonth"></button>
+          <button class="preset" data-preset="last_month" data-i18n="preset.lastMonth"></button>
+          <button class="preset is-active" data-preset="all" data-i18n="preset.all"></button>
+        </div>
 
         <div class="field">
           <label class="field__label" data-i18n="filters.from"></label>
@@ -279,10 +289,9 @@
                   <th data-i18n="col.id"></th>
                   <th data-i18n="col.body"></th>
                   <th data-i18n="col.category"></th>
-                  <th data-i18n="col.topic"></th>
                   <th data-i18n="col.severity"></th>
-                  <th data-i18n="col.severity_reason"></th>
-                  <th style="min-width: 200px" data-i18n="col.action"></th>
+                  <th data-i18n="ticket.column"></th>
+                  <th data-i18n="ticket.assignee"></th>
                   <th data-i18n="col.closed"></th>
                 </tr>
               </thead>
@@ -367,6 +376,21 @@
       </section>
 
     </main>
+  </div>
+</div>
+
+<!-- Ticket drawer (case management) -->
+<div class="drawer drawer--ticket" id="ticket-drawer" aria-hidden="true">
+  <div class="drawer__panel">
+    <div class="drawer__head">
+      <div>
+        <div class="drawer__eyebrow" data-i18n="ticket.title"></div>
+        <h2 class="drawer__title" id="tk-title">—</h2>
+        <div class="drawer__chips" id="tk-chips"></div>
+      </div>
+      <button class="icon-btn" id="tk-close" aria-label="Close"><svg class="icon"><use href="#i-close"/></svg></button>
+    </div>
+    <div class="drawer__body" id="tk-body"></div>
   </div>
 </div>
 
@@ -500,6 +524,19 @@ const I18N = {
     'insight.kind.anomaly':'تنبيه','insight.kind.risk':'خطر','insight.kind.momentum':'اتجاه',
     'insight.kind.complaints':'شكاوى','insight.kind.opportunity':'فرصة','insight.kind.recurring':'تكرار',
     'insight.examples':'أمثلة من البيانات','insight.see_records':'عرض السجلات',
+    'insight.causes':'أسباب محتملة (تحليل ٢٠/٨٠)',
+    'preset.7d':'٧ أيام','preset.30d':'٣٠ يوم','preset.90d':'٩٠ يوم',
+    'preset.thisMonth':'هذا الشهر','preset.lastMonth':'الشهر الماضي','preset.all':'كل البيانات',
+    'ticket.title':'بطاقة الطلب','ticket.status':'الحالة','ticket.assignee':'المسؤول',
+    'ticket.unassigned':'غير مسنَد','ticket.acting_as':'تتصرف بصفة',
+    'ticket.activity':'سجل النشاط','ticket.add_comment':'إضافة تعليق',
+    'ticket.send':'إرسال','ticket.no_comments':'لا توجد تعليقات بعد.',
+    'ticket.no_history':'لا تغييرات بعد.',
+    'ticket.record':'تفاصيل الطلب','ticket.recommended':'الإجراء المقترح',
+    'ticket.column':'الحالة',
+    'status.open':'مفتوح','status.in_progress':'قيد المعالجة','status.pending':'بانتظار رد',
+    'status.resolved':'محلول','status.closed':'مغلق',
+    'history.changed':'غيّر الحالة من','history.to':'إلى',
   },
   en: {
     'app.title':'Beneficiary Engagement Analytics',
@@ -577,6 +614,18 @@ const I18N = {
     'insight.kind.anomaly':'Alert','insight.kind.risk':'Risk','insight.kind.momentum':'Trend',
     'insight.kind.complaints':'Complaints','insight.kind.opportunity':'Opportunity','insight.kind.recurring':'Recurring',
     'insight.examples':'Examples from the data','insight.see_records':'Open records',
+    'insight.causes':'Possible causes (80/20 attribution)',
+    'preset.7d':'7 days','preset.30d':'30 days','preset.90d':'90 days',
+    'preset.thisMonth':'This month','preset.lastMonth':'Last month','preset.all':'All data',
+    'ticket.title':'Ticket','ticket.status':'Status','ticket.assignee':'Assigned to',
+    'ticket.unassigned':'Unassigned','ticket.acting_as':'Acting as',
+    'ticket.activity':'Activity','ticket.add_comment':'Add a comment',
+    'ticket.send':'Send','ticket.no_comments':'No comments yet.','ticket.no_history':'No status changes yet.',
+    'ticket.record':'Request details','ticket.recommended':'Recommended action',
+    'ticket.column':'Status',
+    'status.open':'Open','status.in_progress':'In progress','status.pending':'Awaiting reply',
+    'status.resolved':'Resolved','status.closed':'Closed',
+    'history.changed':'changed status from','history.to':'to',
   },
 };
 
@@ -658,7 +707,10 @@ const state = {
   filters:{ from:'', to:'', categories:[], severities:[], search:'' },
   page:'overview',
   refreshTimer:null,
-  cache:{ kpis:null, weekly:null, cats:null, sev:null, topics:null, fc:null, sevW:null, momentum:null, matrix:null, recur:null },
+  cache:{},
+  users:[],
+  statuses:[],
+  actor: localStorage.getItem('adf.actor') || 'u_layla',
 };
 
 function buildQuery() {
@@ -702,11 +754,213 @@ async function bootstrap() {
   renderChecks('#filter-cats', state.meta.categories, 'categories');
   renderChecks('#filter-sev',  state.meta.severities, 'severities');
 
+  // load users + statuses for the ticket system
+  try {
+    const u = await fetch('/api/users').then(r => r.json());
+    state.users = u.users || []; state.statuses = u.statuses || [];
+    populateActor();
+  } catch (e) { /* tickets unavailable — non-fatal */ }
+
   bindNav(); bindFilters(); bindActions(); bindQA(); bindUpload(); bindDataPage();
-  bindLang(); bindDrill(); bindDrillTriggers();
+  bindLang(); bindDrill(); bindDrillTriggers(); bindTicketDrawer();
+  bindPresets(); bindActor();
 
   await refreshAll();
   bindPlotlyClicks();
+}
+
+/* ---------- presets ---------- */
+function bindPresets() {
+  qsa('#presets .preset').forEach(b => b.addEventListener('click', () => {
+    qsa('#presets .preset').forEach(x => x.classList.remove('is-active'));
+    b.classList.add('is-active');
+    applyPreset(b.dataset.preset);
+  }));
+}
+function applyPreset(p) {
+  if (!state.meta) return;
+  const max = new Date(state.meta.date_max);
+  const min = new Date(state.meta.date_min);
+  const ymd = (d) => d.toISOString().slice(0, 10);
+  let from, to;
+  if (p === 'all') { from = state.meta.date_min; to = state.meta.date_max; }
+  else if (p === 'this_month') {
+    const d = new Date(max); d.setDate(1);
+    from = ymd(d); to = state.meta.date_max;
+  } else if (p === 'last_month') {
+    const e = new Date(max); e.setDate(0); // last day prev month
+    const s = new Date(e); s.setDate(1);
+    from = ymd(s); to = ymd(e);
+  } else {
+    const days = parseInt(p, 10);
+    const d = new Date(max); d.setDate(d.getDate() - days);
+    from = ymd(d < min ? min : d); to = state.meta.date_max;
+  }
+  qs('#filter-from').value = from; qs('#filter-to').value = to;
+  state.filters.from = from; state.filters.to = to;
+  scheduleRefresh();
+}
+
+/* ---------- actor (current user) ---------- */
+function populateActor() {
+  const sel = qs('#actor-select');
+  sel.innerHTML = state.users.map(u =>
+    `<option value="${u.id}">${LANG === 'ar' ? u.name : u.name_en}</option>`
+  ).join('');
+  sel.value = state.actor;
+}
+function bindActor() {
+  qs('#actor-select').addEventListener('change', () => {
+    state.actor = qs('#actor-select').value;
+    localStorage.setItem('adf.actor', state.actor);
+  });
+}
+function userLabel(uid) {
+  if (!uid) return t('ticket.unassigned');
+  const u = state.users.find(x => x.id === uid);
+  return u ? (LANG === 'ar' ? u.name : u.name_en) : uid;
+}
+function statusLabel(sid) {
+  const s = state.statuses.find(x => x.id === sid) || {};
+  return LANG === 'ar' ? (s.label_ar || sid) : (s.label_en || sid);
+}
+function statusColorClass(sid) {
+  const s = state.statuses.find(x => x.id === sid) || {};
+  return ({
+    info:'pill--info', warning:'pill--med', success:'pill--low',
+    neutral:'pill--ghost',
+  }[s.color] || 'pill--ghost');
+}
+
+/* ---------- ticket drawer ---------- */
+function bindTicketDrawer() {
+  qs('#tk-close').addEventListener('click', closeTicket);
+  qs('#ticket-drawer').addEventListener('click', (e) => {
+    if (e.target.id === 'ticket-drawer') closeTicket();
+  });
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && qs('#ticket-drawer').classList.contains('is-open')) closeTicket();
+  });
+}
+function closeTicket() {
+  qs('#ticket-drawer').classList.remove('is-open');
+}
+async function openTicket(requestId) {
+  qs('#ticket-drawer').classList.add('is-open');
+  qs('#tk-body').innerHTML = `<div class="drill-empty">${t('status.loading')}…</div>`;
+  qs('#tk-title').textContent = `#${nm(requestId)}`;
+  qs('#tk-chips').innerHTML = '';
+  await renderTicket(requestId);
+}
+async function renderTicket(requestId) {
+  const data = await fetch('/api/ticket/' + requestId).then(r => r.json());
+  if (data.detail) {
+    qs('#tk-body').innerHTML = `<div class="drill-empty">${escapeHtml(data.detail)}</div>`;
+    return;
+  }
+  const rec = data.record, tk = data.ticket;
+  const sevClass = rec.severity==='عالية'?'pill--high':rec.severity==='متوسطة'?'pill--med':'pill--low';
+  qs('#tk-title').textContent = `#${nm(rec.request_id)} · ${rec.category}`;
+  qs('#tk-chips').innerHTML = `<span class="pill ${sevClass}">${SEV_LABEL(rec.severity)}</span>
+                               <span class="pill pill--ghost">${escapeHtml(rec.topic_label||'—')}</span>`;
+
+  const statusOptions = state.statuses.map(s =>
+    `<option value="${s.id}" ${s.id===tk.status?'selected':''}>${LANG==='ar'?s.label_ar:s.label_en}</option>`
+  ).join('');
+  const userOptions = `<option value="">${t('ticket.unassigned')}</option>` +
+    state.users.map(u => `<option value="${u.id}" ${u.id===tk.assignee_id?'selected':''}>${LANG==='ar'?u.name:u.name_en}</option>`).join('');
+
+  // build activity timeline from comments + history merged
+  const events = [];
+  (tk.comments || []).forEach(c => events.push({
+    kind: 'comment', at: c.created_at, by: c.author_id, body: c.body
+  }));
+  (tk.history || []).forEach(h => events.push({
+    kind: 'status', at: h.at, by: h.by_id, from: h.from_status, to: h.to_status
+  }));
+  events.sort((a,b) => a.at - b.at);
+
+  const eventsHtml = events.length ? events.map(e => {
+    const dt = new Date(e.at * 1000);
+    const dts = LANG==='ar' ? toAr(dt.toISOString().slice(0,16).replace('T',' ')) : dt.toLocaleString('en-GB');
+    if (e.kind === 'comment') {
+      return `<div class="evt evt--comment">
+        <div class="evt__head"><strong>${escapeHtml(userLabel(e.by))}</strong>
+          <span class="evt__time">${dts}</span></div>
+        <div class="evt__body">${escapeHtml(e.body)}</div>
+      </div>`;
+    }
+    return `<div class="evt evt--status">
+      <span class="evt__time">${dts}</span>
+      <strong>${escapeHtml(userLabel(e.by))}</strong> ${t('history.changed')}
+      <span class="pill ${statusColorClass(e.from)}">${statusLabel(e.from)}</span>
+      ${t('history.to')}
+      <span class="pill ${statusColorClass(e.to)}">${statusLabel(e.to)}</span>
+    </div>`;
+  }).join('') : `<div class="evt evt--empty">${t('ticket.no_comments')}</div>`;
+
+  qs('#tk-body').innerHTML = `
+    <div class="tk-record">
+      <div class="tk-record__label">${t('ticket.record')}</div>
+      <div class="tk-record__body">${escapeHtml(rec.body || '—')}</div>
+      <div class="tk-record__meta"><span>${fmtDate(rec.closed_at)}</span></div>
+    </div>
+
+    <div class="tk-controls">
+      <label class="tk-ctl">
+        <span>${t('ticket.status')}</span>
+        <select id="tk-status">${statusOptions}</select>
+      </label>
+      <label class="tk-ctl">
+        <span>${t('ticket.assignee')}</span>
+        <select id="tk-assignee">${userOptions}</select>
+      </label>
+    </div>
+
+    <div class="tk-rec-action">
+      <div class="tk-record__label">${t('ticket.recommended')}</div>
+      <div>${escapeHtml(rec.recommended_action || '')}</div>
+    </div>
+
+    <div class="tk-activity">
+      <div class="tk-section-title">${t('ticket.activity')}</div>
+      <div id="tk-events">${eventsHtml}</div>
+    </div>
+
+    <div class="tk-compose">
+      <textarea id="tk-comment" class="textarea" placeholder="${escapeHtml(t('ticket.add_comment'))}"></textarea>
+      <button class="btn btn--primary" id="tk-send">${t('ticket.send')}</button>
+    </div>
+  `;
+
+  // wire controls
+  qs('#tk-status').addEventListener('change', async (e) => {
+    await fetch('/api/ticket/' + requestId + '/status', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ status: e.target.value, by_id: state.actor }),
+    });
+    await renderTicket(requestId);
+    await loadActions();
+  });
+  qs('#tk-assignee').addEventListener('change', async (e) => {
+    await fetch('/api/ticket/' + requestId + '/assign', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ assignee_id: e.target.value || null, by_id: state.actor }),
+    });
+    await renderTicket(requestId);
+    await loadActions();
+  });
+  qs('#tk-send').addEventListener('click', async () => {
+    const text = qs('#tk-comment').value.trim();
+    if (!text) return;
+    await fetch('/api/ticket/' + requestId + '/comment', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ author_id: state.actor, body: text }),
+    });
+    qs('#tk-comment').value = '';
+    await renderTicket(requestId);
+    await loadActions();
+  });
 }
 
 function setHealth(h) {
@@ -832,6 +1086,7 @@ function bindLang() {
     LANG = LANG === 'ar' ? 'en' : 'ar';
     localStorage.setItem('adf.lang', LANG);
     applyI18n();
+    if (state.users.length) populateActor();
     refreshAll();
   });
 }
@@ -1103,11 +1358,23 @@ function renderInsights(d) {
   qs('#insights-list').innerHTML = list.map((it, i) => {
     const kind = it.kind || 'risk';
     const kindLabel = t('insight.kind.' + kind) || kind;
+    const causesHtml = (it.causes && it.causes.length) ? `
+        <div class="insight__causes">
+          <div class="insight__causes-label">${t('insight.causes')}</div>
+          ${it.causes.map(c => `<div class="cause">
+              <div class="cause__bar"><div class="cause__fill" style="width:${c.probability}%"></div></div>
+              <div class="cause__pct">${nm(Math.round(c.probability))}٪</div>
+              <div class="cause__txt">
+                <div class="cause__name">${escapeHtml(c.cause)}</div>
+                <div class="cause__why">${escapeHtml(c.evidence||'')}</div>
+              </div>
+            </div>`).join('')}
+        </div>` : '';
     const examplesHtml = (it.examples && it.examples.length) ? `
         <div class="insight__examples">
           <div class="insight__examples-label">${t('insight.examples')}</div>
           <div class="insight__examples-list">
-            ${it.examples.map(e => `<div class="insight__ex">
+            ${it.examples.map(e => `<div class="insight__ex" data-id="${e.id}">
                 <span class="insight__ex-id">#${nm(e.id)}</span>
                 <span class="insight__ex-body">${escapeHtml(e.body || '')}</span>
               </div>`).join('')}
@@ -1126,6 +1393,7 @@ function renderInsights(d) {
           <div class="insight__title">${escapeHtml(it.title)}</div>
         </div>
         <div class="insight__row"><span class="insight__tag">${t('insight.tag.evidence')}</span> ${escapeHtml(it.evidence||'')}</div>
+        ${causesHtml}
         <div class="insight__row"><span class="insight__tag insight__tag--act">${t('insight.tag.action')}</span> ${escapeHtml(it.action||'')}</div>
         ${it.metric?`<div class="insight__row"><span class="insight__tag insight__tag--met">${t('insight.tag.metric')}</span> ${escapeHtml(it.metric)}</div>`:''}
         ${examplesHtml}
@@ -1134,12 +1402,13 @@ function renderInsights(d) {
     </div>`;
   }).join('');
 
-  // wire up "see records" buttons — open drill-down for the example IDs
+  // example rows → open the ticket directly
+  qsa('.insight__ex').forEach(el => el.addEventListener('click', () => {
+    const id = parseInt(el.dataset.id, 10);
+    if (id) openTicket(id);
+  }));
+  // "see records" buttons — drill-down
   qsa('.insight__cta').forEach(b => b.addEventListener('click', () => {
-    const ids = b.dataset.ids.split(',').map(Number).filter(Boolean);
-    if (!ids.length) return;
-    // We don't have a direct "by id" filter, so use the first example body
-    // as a body_contains drill — gives the user the cluster that surfaced.
     const card = b.closest('.insight');
     const firstBody = card.querySelector('.insight__ex-body')?.textContent || '';
     const title = card.querySelector('.insight__title')?.textContent || '';
@@ -1446,17 +1715,24 @@ async function loadActions() {
   qs('#actions-meta').textContent = `${fmtInt(data.total)} · ${fmtInt(data.rows.length)}`;
   qs('#actions-tbody').innerHTML = data.rows.length ? data.rows.map(r => {
     const sevClass = r.severity==='عالية'?'pill--high':r.severity==='متوسطة'?'pill--med':'pill--low';
+    const tStatus = r.ticket_status || 'open';
+    const tColor = statusColorClass(tStatus);
+    const cmt = r.ticket_comments ? ` · 💬 ${nm(r.ticket_comments)}` : '';
     return `<tr class="drillable" data-id="${r.request_id}">
       <td class="num">#${nm(r.request_id)}</td>
       <td>${escapeHtml(r.body || t('na'))}</td>
       <td>${escapeHtml(r.category)}</td>
-      <td>${escapeHtml(r.topic_label||t('na'))}</td>
       <td><span class="pill ${sevClass}">${SEV_LABEL(r.severity)}</span></td>
-      <td class="muted">${LANG==='ar'?toAr(escapeHtml(r.severity_reason||t('na'))):escapeHtml(r.severity_reason||t('na'))}</td>
-      <td>${LANG==='ar'?toAr(escapeHtml(r.recommended_action)):escapeHtml(r.recommended_action)}</td>
+      <td><span class="pill ${tColor}">${escapeHtml(statusLabel(tStatus))}${cmt}</span></td>
+      <td>${escapeHtml(userLabel(r.ticket_assignee))}</td>
       <td class="num">${fmtDate(r.closed_at)}</td>
     </tr>`;
-  }).join('') : `<tr><td colspan="8" class="muted center">${t('drawer.empty')}</td></tr>`;
+  }).join('') : `<tr><td colspan="7" class="muted center">${t('drawer.empty')}</td></tr>`;
+  // row click → open ticket panel
+  qsa('#actions-tbody tr.drillable').forEach(tr => tr.addEventListener('click', () => {
+    const id = parseInt(tr.dataset.id, 10);
+    if (id) openTicket(id);
+  }));
 }
 
 bootstrap().catch(err => {

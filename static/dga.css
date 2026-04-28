@@ -480,6 +480,124 @@ body.lang-en .table th, body.lang-en .table td { text-align: left; }
 .insight__ex-body { color: var(--ink); }
 .insight__cta { margin-top: var(--s-2); }
 
+/* Date presets -------------------------------------------------- */
+.presets {
+  display: flex; flex-wrap: wrap; gap: 4px;
+  margin-bottom: var(--s-3);
+}
+.preset {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-pill);
+  padding: 4px 10px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  color: var(--ink-muted);
+  font-family: inherit;
+}
+.preset:hover { background: var(--canvas); }
+.preset.is-active { background: var(--primary-pastel); color: var(--primary-shade); border-color: var(--primary); }
+
+/* Actor select in topbar --------------------------------------- */
+.actor-select {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  padding: 6px 10px;
+  font-family: inherit;
+  font-size: var(--fs-xs);
+  color: var(--ink);
+  cursor: pointer;
+  max-width: 180px;
+}
+
+/* Causes (80/20) ----------------------------------------------- */
+.insight__causes {
+  margin-top: var(--s-3);
+  padding: var(--s-3);
+  background: var(--canvas);
+  border-radius: var(--radius-sm);
+}
+.insight__causes-label {
+  font-size: 11px; font-weight: 600;
+  color: var(--ink-muted);
+  margin-bottom: var(--s-2);
+  letter-spacing: 0.02em;
+}
+.cause {
+  display: grid;
+  grid-template-columns: 56px 36px 1fr;
+  gap: var(--s-2);
+  align-items: start;
+  padding: 6px 0;
+}
+.cause__bar {
+  height: 6px; background: var(--line); border-radius: var(--radius-pill);
+  overflow: hidden; margin-top: 6px;
+}
+.cause__fill {
+  height: 100%; background: linear-gradient(90deg, var(--primary), var(--primary-tint));
+  border-radius: var(--radius-pill);
+}
+.cause__pct {
+  font-feature-settings: "tnum"; font-weight: 700; font-size: var(--fs-sm);
+  color: var(--primary-shade);
+  text-align: end;
+  margin-top: 2px;
+}
+.cause__name { font-weight: 600; font-size: var(--fs-sm); color: var(--ink); }
+.cause__why  { color: var(--ink-muted); font-size: var(--fs-xs); line-height: 1.55; margin-top: 2px; }
+
+/* Ticket drawer (case management) -------------------------------- */
+.drawer--ticket .drawer__panel { width: 720px; max-width: 100%; }
+.tk-record {
+  margin: var(--s-4); padding: var(--s-3); background: var(--canvas);
+  border-radius: var(--radius-md); border-inline-start: 3px solid var(--primary);
+}
+.tk-record__label { font-size: 11px; font-weight: 600; color: var(--ink-muted); margin-bottom: 4px; }
+.tk-record__body  { font-size: var(--fs-body); color: var(--ink); margin-bottom: var(--s-2); }
+.tk-record__meta  { color: var(--ink-faint); font-size: var(--fs-xs); }
+
+.tk-controls {
+  display: grid; grid-template-columns: 1fr 1fr; gap: var(--s-3);
+  margin: 0 var(--s-4) var(--s-4);
+}
+.tk-ctl { display: flex; flex-direction: column; gap: 4px; font-size: var(--fs-xs); color: var(--ink-muted); }
+.tk-ctl select {
+  background: var(--surface); border: 1px solid var(--line-strong);
+  padding: 8px 10px; border-radius: var(--radius-sm);
+  font-family: inherit; font-size: var(--fs-sm); color: var(--ink);
+}
+
+.tk-rec-action {
+  margin: 0 var(--s-4) var(--s-4); padding: var(--s-3);
+  background: var(--surface); border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+}
+.tk-rec-action .tk-record__label { margin-bottom: 4px; }
+
+.tk-activity { margin: 0 var(--s-4); }
+.tk-section-title { font-size: var(--fs-h3); font-weight: 700; margin-bottom: var(--s-3); }
+.evt {
+  background: var(--surface); border: 1px solid var(--line);
+  border-radius: var(--radius-sm); padding: var(--s-3);
+  margin-bottom: var(--s-2);
+}
+.evt--status { background: var(--canvas); display: flex; gap: 6px; align-items: center; flex-wrap: wrap; font-size: var(--fs-xs); color: var(--ink-muted); }
+.evt--empty  { background: transparent; border: 0; color: var(--ink-faint); padding: var(--s-3) 0; }
+.evt__head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 4px; }
+.evt__time { color: var(--ink-faint); font-size: var(--fs-xs); font-feature-settings: "tnum"; }
+.evt__body { font-size: var(--fs-sm); }
+
+.tk-compose {
+  margin: var(--s-4);
+  background: var(--surface); border: 1px solid var(--line);
+  border-radius: var(--radius-md); padding: var(--s-3);
+}
+.tk-compose .textarea { width: 100%; min-height: 70px; }
+.tk-compose .btn { margin-top: var(--s-2); }
+
 /* Period-over-period card --------------------------------------- */
 .pop-grid {
   display: grid; gap: var(--s-3);
