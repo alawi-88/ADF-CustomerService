@@ -626,7 +626,7 @@ def find_related_groups(df: pd.DataFrame,
             "top_category":      top_cat,
             "top_category_en":   None if not top_cat else (
                 {"شكوى":"Complaint","استفسار":"Inquiry","اقتراح":"Suggestion",
-                 "دعم فني":"Tech support","خدمة مراجع":"Reviewer service"}.get(top_cat, top_cat)
+                 "دعم فني":"Tech support","خدمة مراجع":"Beneficiary service"}.get(top_cat, top_cat)
             ),
             "high_pct":          high_pct,
             "examples":          examples,
@@ -832,7 +832,7 @@ _UNIT_EN = {
     "subsidies":   "Subsidy programs",
     "digital":     "Digital transformation",
     "support":     "Digital channels & tech support",
-    "reviewers":   "Reviewer-service desk",
+    "reviewers":   "Beneficiary-service desk",
     "cx":          "Customer-experience team",
     "default":     "Responsible unit for this topic",
 }

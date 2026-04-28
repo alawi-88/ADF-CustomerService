@@ -607,7 +607,7 @@ const I18N = {
     'data.files':'Source files','data.col.name':'File name','data.col.size':'Size','data.col.added':'Added',
     'data.format':'Required file format','data.format.hint':'The file must contain the following columns in order:',
     'data.format.id':'Number — unique request ID','data.format.type':'Type — request type',
-    'data.format.cat':'Title — request category (Complaint / Inquiry / Suggestion / Tech support / Reviewer service)',
+    'data.format.cat':'Title — request category (Complaint / Inquiry / Suggestion / Tech support / Beneficiary service)',
     'data.format.body':'Body — short description','data.format.date':'Closed date — when the request was resolved',
     'col.id':'Request ID','col.body':'Body','col.category':'Category','col.topic':'Topic',
     'col.severity':'Severity','col.severity_reason':'Severity reason','col.action':'Recommended action','col.closed':'Closed at',
@@ -724,6 +724,11 @@ function fmtDate(s) {
   return LANG === 'ar' ? toAr(s) : s;
 }
 
+// Direction-aware "forward" arrow used as a from→to separator. Vertical
+// arrows (↑↓) for trend indicators don't flip — only horizontal direction
+// follows reading order: → in LTR (EN), ← in RTL (AR).
+const fwdArrow = () => LANG === 'en' ? '→' : '←';
+
 const qs  = (sel, root = document) => root.querySelector(sel);
 const qsa = (sel, root = document) => Array.from(root.querySelectorAll(sel));
 const escapeHtml = (s) => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -737,7 +742,7 @@ const CATEGORY_EN = {
   'استفسار':'Inquiry',
   'اقتراح':'Suggestion',
   'دعم فني':'Tech support',
-  'خدمة مراجع':'Reviewer service',
+  'خدمة مراجع':'Beneficiary service',
 };
 const catDisplay = (c) => LANG === 'en' ? (CATEGORY_EN[c] || c) : c;
 // Pick AR or EN field on a record-shaped object
@@ -1205,7 +1210,7 @@ function updateFilterStateLine() {
   const c = state.filters.categories.length, s = state.filters.severities.length;
   const allCats = state.meta.categories.length, allSev = state.meta.severities.length;
   const parts = [
-    `${fmtDate(state.filters.from)} ← ${fmtDate(state.filters.to)}`,
+    `${fmtDate(state.filters.from)} ${fwdArrow()} ${fmtDate(state.filters.to)}`,
     `${t('filters.category')} ${fmtInt(c)}/${fmtInt(allCats)}`,
     `${t('filters.severity')} ${fmtInt(s)}/${fmtInt(allSev)}`,
   ];
@@ -1538,7 +1543,7 @@ function renderInsights(d) {
         </div>` : '';
     const drillBtn = (it.examples && it.examples.length) ? `
         <button class="link-btn insight__cta" data-ids="${(it.examples||[]).map(e=>e.id).join(',')}">
-          ${t('insight.see_records')} →
+          ${t('insight.see_records')} ${fwdArrow()}
         </button>` : '';
     return `
     <div class="insight insight--${kind}">
@@ -1580,7 +1585,7 @@ async function loadPeriodComparison() {
     const card = qs('#pop-card'); if (!card) return;
     if (!d || !d.current || !d.current.total) { card.style.display = 'none'; return; }
     card.style.display = '';
-    qs('#pop-meta').textContent = `${fmtDate(d.current_start)} → ${fmtDate(d.current_end)}`;
+    qs('#pop-meta').textContent = `${fmtDate(d.current_start)} ${fwdArrow()} ${fmtDate(d.current_end)}`;
     const cells = [
       { key:'total',      label:t('pop.total'),      cur:d.current.total,      prev:d.previous.total,      delta:d.delta_pct.total,      good:'down' },
       { key:'complaints', label:t('pop.complaints'), cur:d.current.complaints, prev:d.previous.complaints, delta:d.delta_pct.complaints, good:'down' },
@@ -1593,9 +1598,9 @@ async function loadPeriodComparison() {
       const dTxt = c.delta == null ? t('na') : `${arrow} ${fmtPct(Math.abs(c.delta))}`;
       return `<div class="pop">
         <div class="pop__label">${c.label}</div>
-        <div class="pop__row"><span class="pop__cur">${fmtInt(c.cur)}</span>
-          <span class="pop__sep">←</span>
-          <span class="pop__prev">${fmtInt(c.prev)}</span></div>
+        <div class="pop__row"><span class="pop__prev">${fmtInt(c.prev)}</span>
+          <span class="pop__sep">${fwdArrow()}</span>
+          <span class="pop__cur">${fmtInt(c.cur)}</span></div>
         <div class="pop__delta ${dCls}">${dTxt}</div>
       </div>`;
     }).join('');
@@ -1810,7 +1815,7 @@ function renderMomentum(rows) {
     const up = r.growth_pct >= 0;
     return `<div class="momentum drillable" data-topic="${escapeHtml(r.topic_label)}">
       <div class="momentum__name">${escapeHtml(topicLbl(r))}</div>
-      <div class="momentum__nums num">${fmtInt(r.recent)} <span class="momentum__sep">←</span> ${fmtInt(r.prior)}</div>
+      <div class="momentum__nums num">${fmtInt(r.prior)} <span class="momentum__sep">${fwdArrow()}</span> ${fmtInt(r.recent)}</div>
       <div class="momentum__delta ${up?'is-up':'is-down'}">${up?'↑':'↓'} ${fmtPct(Math.abs(r.growth_pct))}</div>
     </div>`;
   }).join('');
@@ -1904,7 +1909,7 @@ function renderRecurring(rows) {
   root.innerHTML = rows.map(r => `
     <div class="recur drillable" data-phrase="${escapeHtml(r.phrase)}">
       <div class="recur__phrase">${escapeHtml(r.phrase)}</div>
-      <div class="recur__meta">${escapeHtml(r.top_category)} · ${fmtDate(r.first_seen)} ← ${fmtDate(r.last_seen)}</div>
+      <div class="recur__meta">${escapeHtml(catDisplay(r.top_category))} · ${fmtDate(r.first_seen)} ${fwdArrow()} ${fmtDate(r.last_seen)}</div>
       <div class="recur__meta">${fmtPct(r.high_pct)}</div>
       <div class="recur__count">${fmtInt(r.count)} ×</div>
     </div>`).join('');

@@ -231,7 +231,7 @@ CATEGORY_EN = {
     "استفسار": "Inquiry",
     "اقتراح": "Suggestion",
     "دعم فني": "Tech support",
-    "خدمة مراجع": "Reviewer service",
+    "خدمة مراجع": "Beneficiary service",
 }
 
 
@@ -408,9 +408,9 @@ def _rule_classify(category: str, body: str) -> dict:
     if cat == "خدمة مراجع":
         return {
             "severity": "متوسطة",
-            "topic_ar": "خدمة المراجعين", "topic_en": "Reviewer service",
+            "topic_ar": "خدمة المراجعين", "topic_en": "Beneficiary service",
             "reason_ar": f"طلب يخصّ مسار خدمة المراجعين{(' حول «' + excerpt + '»') if excerpt else ''} — يتطلب متابعة لاستكمال إجراءات المستفيد.",
-            "reason_en": f"Reviewer-service request{(' about «' + excerpt + '»') if excerpt else ''} — needs follow-up to complete the beneficiary's procedures.",
+            "reason_en": f"Beneficiary-service request{(' about «' + excerpt + '»') if excerpt else ''} — needs follow-up to complete the beneficiary's procedures.",
         }
 
     # 4) Low signals
