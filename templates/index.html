@@ -708,9 +708,14 @@ function applyI18n() {
 /* ====== Number formatting ============================================== */
 const _AR_DIGITS = '٠١٢٣٤٥٦٧٨٩';
 function toAr(s) { return String(s ?? '').replace(/[0-9]/g, d => _AR_DIGITS[+d]); }
-function nm(n) { // localized numeric for current language
+function nm(n) { // localized numeric for current language (with grouping)
   if (n == null) return t('na');
   const s = Number(n).toLocaleString('en-US');
+  return LANG === 'ar' ? toAr(s) : s;
+}
+function nmId(n) { // raw digits — no thousand separators (used for IDs)
+  if (n == null) return t('na');
+  const s = String(n);
   return LANG === 'ar' ? toAr(s) : s;
 }
 function fmtInt(n) { return nm(n); }
@@ -938,7 +943,7 @@ function closeTicket() {
 async function openTicket(requestId) {
   qs('#ticket-drawer').classList.add('is-open');
   qs('#tk-body').innerHTML = `<div class="drill-empty">${t('status.loading')}…</div>`;
-  qs('#tk-title').textContent = `#${nm(requestId)}`;
+  qs('#tk-title').textContent = `#${nmId(requestId)}`;
   qs('#tk-chips').innerHTML = '';
   await renderTicket(requestId);
 }
@@ -953,7 +958,7 @@ async function renderTicket(requestId) {
   const recTopic = pickLang(rec, 'topic_label');
   const recReason = pickLang(rec, 'severity_reason');
   const recAction = pickLang(rec, 'recommended_action');
-  qs('#tk-title').textContent = `#${nm(rec.request_id)} · ${catDisplay(rec.category)}`;
+  qs('#tk-title').textContent = `#${nmId(rec.request_id)} · ${catDisplay(rec.category)}`;
   qs('#tk-chips').innerHTML = `<span class="pill ${sevClass}">${SEV_LABEL(rec.severity)}</span>
                                <span class="pill pill--ghost">${escapeHtml(recTopic||'—')}</span>`;
 
@@ -1326,7 +1331,7 @@ function renderDrillRows(data) {
         <div class="drill-row__head">
           <span class="pill ${sevClass}">${escapeHtml(SEV_LABEL(r.severity))}</span>
           <span class="drill-row__cat">${escapeHtml(r.category)}</span>
-          <span class="drill-row__id">#${nm(r.request_id)}</span>
+          <span class="drill-row__id">#${nmId(r.request_id)}</span>
           <span class="drill-row__id">${fmtDate(r.closed_at)}</span>
         </div>
         <div class="drill-row__body">${escapeHtml(r.body || t('na'))}</div>
@@ -1536,7 +1541,7 @@ function renderInsights(d) {
           <div class="insight__examples-label">${t('insight.examples')}</div>
           <div class="insight__examples-list">
             ${it.examples.map(e => `<div class="insight__ex" data-id="${e.id}">
-                <span class="insight__ex-id">#${nm(e.id)}</span>
+                <span class="insight__ex-id">#${nmId(e.id)}</span>
                 <span class="insight__ex-body">${escapeHtml(e.body || '')}</span>
               </div>`).join('')}
           </div>
@@ -1850,7 +1855,7 @@ function renderLinked(groups) {
     const cat = LANG === 'en' ? (g.top_category_en || g.top_category) : g.top_category;
     const examplesHtml = (g.examples || []).map(e => `
       <div class="insight__ex" data-id="${e.id}">
-        <span class="insight__ex-id">#${nm(e.id)}</span>
+        <span class="insight__ex-id">#${nmId(e.id)}</span>
         <span class="insight__ex-body">${escapeHtml(e.body || '')}</span>
       </div>`).join('');
     const rationale = g.rationale ? `
@@ -1954,7 +1959,7 @@ async function loadActions() {
     const tColor = statusColorClass(tStatus);
     const cmt = r.ticket_comments ? ` · 💬 ${nm(r.ticket_comments)}` : '';
     return `<tr class="drillable" data-id="${r.request_id}">
-      <td class="num">#${nm(r.request_id)}</td>
+      <td class="num">#${nmId(r.request_id)}</td>
       <td>${escapeHtml(r.body || t('na'))}</td>
       <td>${escapeHtml(catDisplay(r.category))}</td>
       <td><span class="pill ${sevClass}" title="${r.severity_overridden?'overridden':'AI'}">${SEV_LABEL(r.severity)}${r.severity_overridden?' ✎':''}</span></td>
@@ -1969,6 +1974,28 @@ async function loadActions() {
     if (id) openTicket(id);
   }));
 }
+
+// Make every Plotly chart respond to viewport changes — including sidebar
+// collapse, language switch, and window resize. Plotly's `responsive: true`
+// handles width by default, but we trigger an explicit resize to recover
+// from CSS layout changes that don't fire its internal observer.
+const PLOT_IDS = [
+  'chart-weekly','chart-categories','chart-severity','chart-forecast',
+  'chart-topics','chart-severity-weekly','chart-weekly-cat','chart-matrix',
+];
+function resizeAllPlots() {
+  PLOT_IDS.forEach(id => {
+    const el = document.getElementById(id);
+    if (el && el.data && window.Plotly && Plotly.Plots && Plotly.Plots.resize) {
+      try { Plotly.Plots.resize(el); } catch(_) {}
+    }
+  });
+}
+let _resizeTimer;
+window.addEventListener('resize', () => {
+  clearTimeout(_resizeTimer);
+  _resizeTimer = setTimeout(resizeAllPlots, 80);
+});
 
 bootstrap().catch(err => {
   console.error(err);
