@@ -1,0 +1,298 @@
+/* =====================================================================
+   Customer-experience analytics — legacy stylesheet (Streamlit era)
+   Theme based on DGA "كود المنصات" (National Design System) tokens
+   Source: github.com/GOV-SA/design-system-gov.sa  (foundations + components)
+   Notes:
+     - Tokens (colors, spacing, radii) follow DGA primitives.
+     - Arabic font: Noto Naskh Arabic (Google Fonts) — DGA recommended Arabic face.
+     - English font: IBM Plex Sans (Google Fonts) — close stand-in for TheSans
+       (TheSans is a paid family; Plex is a permissively licensed neighbour).
+     - Layout direction: RTL.
+   ===================================================================== */
+
+@import url('https://fonts.googleapis.com/css2?family=Noto+Naskh+Arabic:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap');
+
+:root {
+  /* --- DGA Primary (green) --- */
+  --color-primary:        #26634B;
+  --color-primary-shade:  #066058;
+  --color-primary-tint:   #27AA8C;
+  --color-primary-pastel: #ACDDC7;
+  --color-primary-dark:   #144D3F;
+
+  /* --- DGA Secondary (blue) --- */
+  --color-secondary:        #005A96;
+  --color-secondary-shade:  #0053BA;
+  --color-secondary-tint:   #0054AE;
+  --color-secondary-pastel: #339EEC;
+
+  /* --- Semantic --- */
+  --color-success: #006604;
+  --color-warning: #FFC107;
+  --color-danger:  #AF0818;
+  --color-info:    #339EEC;
+
+  /* --- Neutrals --- */
+  --color-gray:        #323232;
+  --color-gray-shade:  #242424;
+  --color-gray-tint:   #595959;
+  --color-gray-pastel: #EAEAEA;
+  --color-black:       #000000;
+  --color-white:       #FFFFFF;
+  --color-bg:          #F7F8F9;
+  --color-surface:     #FFFFFF;
+  --color-border:      #E2E5E8;
+
+  /* --- Type --- */
+  --font-arabic:  'Noto Naskh Arabic', 'Tajawal', system-ui, sans-serif;
+  --font-latin:   'IBM Plex Sans', system-ui, sans-serif;
+  --font-mono:    SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+
+  --fs-h1: 2.5rem;
+  --fs-h2: 2rem;
+  --fs-h3: 1.75rem;
+  --fs-h4: 1.5rem;
+  --fs-h5: 1.25rem;
+  --fs-h6: 1rem;
+  --fs-base: 1rem;
+  --fs-sm: 0.875rem;
+
+  /* --- Spacing --- */
+  --space-xs: 0.5rem;
+  --space-sm: 0.75rem;
+  --space-md: 1rem;
+  --space-lg: 1.5rem;
+  --space-xl: 2rem;
+
+  /* --- Radii --- */
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-pill: 3rem;
+
+  /* --- Shadows --- */
+  --shadow-sm: 0 1px 2px rgba(20,77,63,0.06), 0 1px 3px rgba(20,77,63,0.04);
+  --shadow-md: 0 4px 12px rgba(20,77,63,0.08), 0 2px 4px rgba(20,77,63,0.04);
+}
+
+/* ---------- Global RTL + base typography ---------- */
+
+html, body, [class*="css"], [data-testid] {
+  font-family: var(--font-arabic);
+  direction: rtl;
+}
+.stApp {
+  background: var(--color-bg);
+  color: var(--color-gray);
+  direction: rtl;
+}
+
+/* Make all Streamlit text containers RTL-friendly */
+.stMarkdown, .stMarkdown p, .stMarkdown li, .stText, .stMetric label,
+[data-testid="stMetricLabel"], [data-testid="stMetricValue"],
+[data-testid="stHeader"], h1, h2, h3, h4, h5, h6 {
+  direction: rtl;
+  text-align: right;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-arabic);
+  color: var(--color-primary-dark);
+  font-weight: 700;
+  letter-spacing: 0;
+}
+
+h1 { font-size: var(--fs-h1); }
+h2 { font-size: var(--fs-h2); }
+h3 { font-size: var(--fs-h3); }
+
+/* ---------- Sidebar ---------- */
+
+[data-testid="stSidebar"] {
+  background: var(--color-white);
+  border-left: 1px solid var(--color-border);
+  direction: rtl;
+}
+[data-testid="stSidebar"] * { direction: rtl; text-align: right; }
+[data-testid="stSidebar"] h1, [data-testid="stSidebar"] h2,
+[data-testid="stSidebar"] h3, [data-testid="stSidebar"] h4 {
+  color: var(--color-primary-dark);
+}
+
+/* ---------- Header banner (custom) ---------- */
+
+.adf-banner {
+  background: linear-gradient(95deg, var(--color-primary-dark) 0%, var(--color-primary) 70%, var(--color-primary-tint) 100%);
+  color: var(--color-white);
+  padding: var(--space-lg) var(--space-xl);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-md);
+  margin-bottom: var(--space-lg);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  direction: rtl;
+}
+.adf-banner h1 {
+  color: var(--color-white);
+  margin: 0;
+  font-size: 1.5rem;
+}
+.adf-banner .adf-subtitle {
+  font-size: var(--fs-sm);
+  opacity: 0.92;
+  margin-top: 4px;
+}
+.adf-banner .adf-meta {
+  text-align: left;
+  font-size: var(--fs-sm);
+  background: rgba(255,255,255,0.12);
+  padding: 6px 14px;
+  border-radius: var(--radius-pill);
+}
+
+/* ---------- KPI cards ---------- */
+
+.kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: var(--space-md);
+  margin-bottom: var(--space-lg);
+}
+.kpi-card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-md) var(--space-lg);
+  box-shadow: var(--shadow-sm);
+  text-align: right;
+  position: relative;
+}
+.kpi-card .kpi-label {
+  color: var(--color-gray-tint);
+  font-size: var(--fs-sm);
+  margin-bottom: 6px;
+}
+.kpi-card .kpi-value {
+  color: var(--color-primary-dark);
+  font-size: 2rem;
+  font-weight: 700;
+  line-height: 1.1;
+}
+.kpi-card .kpi-delta {
+  font-size: var(--fs-sm);
+  margin-top: 6px;
+}
+.kpi-card.kpi-warn .kpi-value { color: var(--color-warning); }
+.kpi-card.kpi-danger .kpi-value { color: var(--color-danger); }
+.kpi-card.kpi-success .kpi-value { color: var(--color-success); }
+.kpi-card .kpi-tag {
+  position: absolute;
+  top: 10px;
+  left: 12px;
+  font-size: 11px;
+  background: var(--color-primary-pastel);
+  color: var(--color-primary-dark);
+  padding: 2px 10px;
+  border-radius: var(--radius-pill);
+}
+
+/* ---------- Severity / status pills ---------- */
+
+.pill {
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: var(--radius-pill);
+  font-size: var(--fs-sm);
+  font-weight: 600;
+}
+.pill-high   { background: #FBE6E8; color: var(--color-danger); }
+.pill-medium { background: #FFF3D6; color: #8A6500; }
+.pill-low    { background: #E1F0E2; color: var(--color-success); }
+.pill-info   { background: #DDEEFB; color: var(--color-secondary); }
+
+/* ---------- Streamlit element overrides ---------- */
+
+.stButton > button {
+  background: var(--color-primary);
+  color: var(--color-white);
+  border: 0;
+  border-radius: var(--radius-pill);
+  padding: 8px 22px;
+  font-weight: 600;
+  font-family: var(--font-arabic);
+}
+.stButton > button:hover {
+  background: var(--color-primary-dark);
+  color: var(--color-white);
+}
+.stDownloadButton > button {
+  background: var(--color-secondary);
+  color: var(--color-white);
+  border-radius: var(--radius-pill);
+}
+
+/* Tabs */
+.stTabs [data-baseweb="tab-list"] {
+  gap: 4px;
+  direction: rtl;
+}
+.stTabs [data-baseweb="tab"] {
+  background: var(--color-white);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+  padding: 8px 18px;
+  font-family: var(--font-arabic);
+  font-weight: 600;
+}
+.stTabs [aria-selected="true"] {
+  background: var(--color-primary-pastel);
+  color: var(--color-primary-dark);
+  border-bottom-color: var(--color-primary);
+}
+
+/* DataFrames */
+[data-testid="stDataFrame"] { direction: rtl; }
+[data-testid="stDataFrame"] * { font-family: var(--font-arabic); }
+
+/* Inputs */
+.stTextInput > div > div > input,
+.stTextArea textarea,
+.stSelectbox > div > div,
+.stMultiSelect > div > div {
+  font-family: var(--font-arabic);
+  direction: rtl;
+  text-align: right;
+  border-radius: var(--radius-sm) !important;
+}
+
+/* Alert-style block we use for early-warning cards */
+.alert-card {
+  border-right: 4px solid var(--color-warning);
+  background: #FFFBEC;
+  padding: var(--space-md) var(--space-lg);
+  border-radius: var(--radius-sm);
+  margin-bottom: var(--space-md);
+}
+.alert-card.severity-high { border-right-color: var(--color-danger); background: #FFF5F6; }
+.alert-card .alert-title  { color: var(--color-primary-dark); font-weight: 700; margin-bottom: 4px; }
+.alert-card .alert-meta   { color: var(--color-gray-tint); font-size: var(--fs-sm); }
+.alert-card .alert-action { margin-top: 8px; padding: 8px 12px; background: var(--color-white); border: 1px solid var(--color-border); border-radius: var(--radius-sm); }
+
+/* Footer watermark */
+.adf-footer {
+  margin-top: var(--space-xl);
+  padding: var(--space-md);
+  border-top: 1px dashed var(--color-border);
+  color: var(--color-gray-tint);
+  font-size: var(--fs-sm);
+  text-align: right;
+}
+.adf-footer .draft-tag {
+  display: inline-block;
+  background: var(--color-warning);
+  color: #5A4500;
+  padding: 2px 10px;
+  border-radius: var(--radius-pill);
+  font-weight: 700;
+  margin-left: 8px;
+}

@@ -1,0 +1,1382 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>منصة تحليل مشاركات المستفيدين</title>
+<link rel="stylesheet" href="/static/dga.css">
+<script src="https://cdn.plot.ly/plotly-2.35.2.min.js" charset="utf-8"></script>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <symbol id="i-overview" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></symbol>
+    <symbol id="i-trend" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 8-8"/><path d="M14 7h7v7"/></symbol>
+    <symbol id="i-alert" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M9 12l2 2 4-4"/><circle cx="12" cy="12" r="9"/></symbol>
+    <symbol id="i-question" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.5 2.5 0 0 1 5 0c0 1.5-2.5 2-2.5 4"/><line x1="12" y1="17" x2="12.01" y2="17"/></symbol>
+    <symbol id="i-upload" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></symbol>
+    <symbol id="i-refresh" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></symbol>
+    <symbol id="i-close" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></symbol>
+    <symbol id="i-file" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></symbol>
+    <symbol id="i-bulb" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6"/><path d="M10 22h4"/><path d="M12 2a7 7 0 0 0-4 12.7c.7.6 1 1.4 1 2.3v1h6v-1c0-.9.3-1.7 1-2.3A7 7 0 0 0 12 2z"/></symbol>
+    <symbol id="i-info" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><line x1="12" y1="11" x2="12" y2="16"/><line x1="12" y1="8" x2="12.01" y2="8"/></symbol>
+    <symbol id="i-download" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></symbol>
+    <symbol id="i-globe" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></symbol>
+  </defs>
+</svg>
+</head>
+<body>
+
+<div class="app">
+
+  <header class="topbar">
+    <div class="topbar__brand">
+      <div class="topbar__wordmark">
+        <span class="topbar__wordmark-ar" data-i18n="app.title"></span>
+        <span class="topbar__wordmark-sub" data-i18n="app.subtitle"></span>
+      </div>
+    </div>
+    <div class="topbar__meta">
+      <button id="btn-lang" class="btn btn--ghost btn--small" aria-label="Switch language">
+        <svg class="icon"><use href="#i-globe"/></svg>
+        <span id="lang-label">EN</span>
+      </button>
+      <button id="btn-upload" class="btn btn--primary btn--small">
+        <svg class="icon"><use href="#i-upload"/></svg>
+        <span data-i18n="action.upload"></span>
+      </button>
+      <span id="health-pill" class="pill pill--ghost"><span class="pill__dot"></span> <span data-i18n="status.loading"></span></span>
+    </div>
+  </header>
+
+  <div class="shell">
+
+    <aside class="sidebar">
+      <div class="sidebar__section">
+        <div class="sidebar__label" data-i18n="nav.title"></div>
+        <ul class="nav" id="nav">
+          <li class="nav__item is-active" data-page="overview">
+            <svg class="nav__icon"><use href="#i-overview"/></svg><span data-i18n="nav.overview"></span>
+          </li>
+          <li class="nav__item" data-page="patterns">
+            <svg class="nav__icon"><use href="#i-trend"/></svg><span data-i18n="nav.patterns"></span>
+          </li>
+          <li class="nav__item" data-page="alerts">
+            <svg class="nav__icon"><use href="#i-alert"/></svg><span data-i18n="nav.alerts"></span>
+          </li>
+          <li class="nav__item" data-page="actions">
+            <svg class="nav__icon"><use href="#i-check"/></svg><span data-i18n="nav.actions"></span>
+          </li>
+          <li class="nav__item" data-page="qa">
+            <svg class="nav__icon"><use href="#i-question"/></svg><span data-i18n="nav.qa"></span>
+          </li>
+          <li class="nav__item" data-page="data">
+            <svg class="nav__icon"><use href="#i-file"/></svg><span data-i18n="nav.data"></span>
+          </li>
+        </ul>
+      </div>
+
+      <div class="sidebar__section">
+        <div class="sidebar__label" data-i18n="filters.title"></div>
+
+        <div class="field">
+          <label class="field__label" data-i18n="filters.from"></label>
+          <input id="filter-from" type="date" class="input">
+        </div>
+        <div class="field">
+          <label class="field__label" data-i18n="filters.to"></label>
+          <input id="filter-to" type="date" class="input">
+        </div>
+
+        <div class="field">
+          <div class="field__head">
+            <label class="field__label" data-i18n="filters.category"></label>
+            <button class="link-btn" data-toggle-group="categories" data-i18n="filters.toggle"></button>
+          </div>
+          <div id="filter-cats" class="checks"></div>
+        </div>
+
+        <div class="field">
+          <div class="field__head">
+            <label class="field__label" data-i18n="filters.severity"></label>
+            <button class="link-btn" data-toggle-group="severities" data-i18n="filters.toggle"></button>
+          </div>
+          <div id="filter-sev" class="checks"></div>
+        </div>
+
+        <div class="field">
+          <label class="field__label" data-i18n="filters.search"></label>
+          <input id="filter-search" type="text" class="input" placeholder="">
+        </div>
+
+        <button id="reset-filters" class="btn btn--ghost btn--small" style="width:100%" data-i18n="filters.reset"></button>
+        <div id="filter-state" class="filter-state">—</div>
+      </div>
+
+      <div class="sidebar__section">
+        <div class="sidebar__label" data-i18n="status.engine"></div>
+        <div id="ai-status" class="pill pill--ghost">…</div>
+      </div>
+    </aside>
+
+    <main class="main">
+
+      <!-- =================== OVERVIEW =================== -->
+      <section class="page is-visible" data-page="overview">
+        <div class="page-head">
+          <div>
+            <h1 class="page-head__title" data-i18n="overview.title"></h1>
+            <p class="page-head__subtitle" data-i18n="overview.subtitle"></p>
+          </div>
+        </div>
+
+        <div class="grid grid--kpi section" id="kpi-grid"></div>
+
+        <div class="card section insights-card">
+          <div class="card__head">
+            <h2 class="card__title">
+              <svg class="icon" style="color:var(--primary)"><use href="#i-bulb"/></svg>
+              <span data-i18n="overview.insights"></span>
+            </h2>
+            <span class="card__hint" id="insights-meta" data-i18n="overview.insights.hint"></span>
+          </div>
+          <div id="insights-list"></div>
+        </div>
+
+        <div class="grid grid--2 section">
+          <div class="card">
+            <div class="card__head"><h2 class="card__title" data-i18n="chart.weekly"></h2></div>
+            <div id="chart-weekly" class="chart-canvas"></div>
+            <div class="caption" id="cap-weekly"></div>
+          </div>
+          <div class="card">
+            <div class="card__head"><h2 class="card__title" data-i18n="chart.categories"></h2></div>
+            <div id="chart-categories" class="chart-canvas"></div>
+            <div class="caption" id="cap-categories"></div>
+          </div>
+        </div>
+
+        <div class="card section">
+          <div class="card__head">
+            <h2 class="card__title" data-i18n="chart.severity"></h2>
+            <span class="card__hint" data-i18n="chart.severity.hint"></span>
+          </div>
+          <div id="chart-severity" class="chart-canvas chart-canvas--short"></div>
+          <div class="caption" id="cap-severity"></div>
+        </div>
+
+        <div class="card section">
+          <div class="card__head">
+            <h2 class="card__title" data-i18n="chart.forecast"></h2>
+            <span class="card__hint" data-i18n="chart.forecast.hint"></span>
+          </div>
+          <div id="chart-forecast" class="chart-canvas"></div>
+          <div class="caption" id="cap-forecast"></div>
+          <div id="forecast-by-cat" class="forecast-cats"></div>
+        </div>
+      </section>
+
+      <!-- =================== PATTERNS =================== -->
+      <section class="page" data-page="patterns">
+        <div class="page-head">
+          <div>
+            <h1 class="page-head__title" data-i18n="patterns.title"></h1>
+            <p class="page-head__subtitle" data-i18n="patterns.subtitle"></p>
+          </div>
+        </div>
+
+        <div class="card section">
+          <div class="card__head">
+            <h2 class="card__title" data-i18n="chart.topics"></h2>
+            <span class="card__hint" data-i18n="chart.topics.hint"></span>
+          </div>
+          <div id="chart-topics" class="chart-canvas chart-canvas--tall"></div>
+          <div class="caption" id="cap-topics"></div>
+        </div>
+
+        <div class="grid grid--2 section">
+          <div class="card">
+            <div class="card__head">
+              <h2 class="card__title" data-i18n="chart.severity_weekly"></h2>
+            </div>
+            <div id="chart-severity-weekly" class="chart-canvas"></div>
+            <div class="caption" id="cap-severity-weekly"></div>
+          </div>
+          <div class="card">
+            <div class="card__head">
+              <h2 class="card__title" data-i18n="chart.momentum"></h2>
+              <span class="card__hint" data-i18n="chart.momentum.hint"></span>
+            </div>
+            <div id="momentum-list"></div>
+          </div>
+        </div>
+
+        <div class="card section">
+          <div class="card__head"><h2 class="card__title" data-i18n="chart.weekly_cat"></h2></div>
+          <div id="chart-weekly-cat" class="chart-canvas"></div>
+          <div class="caption" id="cap-weekly-cat"></div>
+        </div>
+
+        <div class="card section">
+          <div class="card__head">
+            <h2 class="card__title" data-i18n="chart.matrix"></h2>
+            <span class="card__hint" data-i18n="chart.matrix.hint"></span>
+          </div>
+          <div id="chart-matrix" class="chart-canvas chart-canvas--short"></div>
+          <div class="caption" id="cap-matrix"></div>
+        </div>
+
+        <div class="card section">
+          <div class="card__head">
+            <h2 class="card__title" data-i18n="chart.recurring"></h2>
+            <span class="card__hint" data-i18n="chart.recurring.hint"></span>
+          </div>
+          <div id="recurring-list"></div>
+        </div>
+      </section>
+
+      <!-- =================== ALERTS =================== -->
+      <section class="page" data-page="alerts">
+        <div class="page-head">
+          <div>
+            <h1 class="page-head__title" data-i18n="alerts.title"></h1>
+            <p class="page-head__subtitle" data-i18n="alerts.subtitle"></p>
+          </div>
+        </div>
+        <div id="alerts-list" class="grid" style="gap:var(--s-3)"></div>
+      </section>
+
+      <!-- =================== ACTIONS =================== -->
+      <section class="page" data-page="actions">
+        <div class="page-head">
+          <div>
+            <h1 class="page-head__title" data-i18n="actions.title"></h1>
+            <p class="page-head__subtitle" data-i18n="actions.subtitle"></p>
+          </div>
+        </div>
+
+        <div class="toolbar">
+          <label class="check is-on" id="actions-only-high">
+            <input type="checkbox" checked> <span data-i18n="actions.high_only"></span>
+          </label>
+          <span class="toolbar__sep"></span>
+          <span class="card__hint" id="actions-meta">—</span>
+        </div>
+
+        <div class="card">
+          <div class="table-wrap">
+            <table class="table table--actions">
+              <thead>
+                <tr>
+                  <th data-i18n="col.id"></th>
+                  <th data-i18n="col.body"></th>
+                  <th data-i18n="col.category"></th>
+                  <th data-i18n="col.topic"></th>
+                  <th data-i18n="col.severity"></th>
+                  <th data-i18n="col.severity_reason"></th>
+                  <th style="min-width: 200px" data-i18n="col.action"></th>
+                  <th data-i18n="col.closed"></th>
+                </tr>
+              </thead>
+              <tbody id="actions-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- =================== QA =================== -->
+      <section class="page" data-page="qa">
+        <div class="page-head">
+          <div>
+            <h1 class="page-head__title" data-i18n="qa.title"></h1>
+            <p class="page-head__subtitle" data-i18n="qa.subtitle"></p>
+          </div>
+        </div>
+
+        <div class="card section">
+          <div class="field">
+            <label class="field__label" data-i18n="qa.label"></label>
+            <textarea id="qa-input" class="textarea" placeholder=""></textarea>
+          </div>
+          <div id="qa-examples" style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:var(--s-3)"></div>
+          <button id="qa-submit" class="btn btn--primary" data-i18n="qa.submit"></button>
+        </div>
+
+        <div id="qa-answer" class="card" style="display:none">
+          <div class="card__head">
+            <h2 class="card__title" data-i18n="qa.answer"></h2>
+            <span id="qa-source-pill" class="pill pill--ghost"></span>
+          </div>
+          <div id="qa-answer-body"></div>
+          <details style="margin-top:var(--s-4)">
+            <summary style="cursor:pointer; color:var(--ink-muted); font-size:var(--fs-xs)" data-i18n="qa.context_toggle"></summary>
+            <pre id="qa-context" style="background:var(--canvas); padding:var(--s-3); border-radius:var(--radius-sm); font-size:var(--fs-xs); margin-top:var(--s-2); white-space:pre-wrap"></pre>
+          </details>
+        </div>
+      </section>
+
+      <!-- =================== DATA =================== -->
+      <section class="page" data-page="data">
+        <div class="page-head">
+          <div>
+            <h1 class="page-head__title" data-i18n="data.title"></h1>
+            <p class="page-head__subtitle" data-i18n="data.subtitle"></p>
+          </div>
+          <div style="display:flex; gap:8px">
+            <button id="btn-upload-2" class="btn btn--primary">
+              <svg class="icon"><use href="#i-upload"/></svg> <span data-i18n="action.upload"></span>
+            </button>
+            <button id="btn-refresh" class="btn btn--ghost">
+              <svg class="icon"><use href="#i-refresh"/></svg> <span data-i18n="action.reprocess"></span>
+            </button>
+          </div>
+        </div>
+
+        <div class="card section">
+          <div class="card__head">
+            <h2 class="card__title" data-i18n="data.files"></h2>
+            <span class="card__hint" id="files-meta">—</span>
+          </div>
+          <div class="table-wrap">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th data-i18n="data.col.name"></th>
+                  <th data-i18n="data.col.size"></th>
+                  <th data-i18n="data.col.added"></th>
+                </tr>
+              </thead>
+              <tbody id="files-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="card section" style="background:var(--canvas); border-style:dashed">
+          <h2 class="card__title" data-i18n="data.format"></h2>
+          <p style="margin-top:var(--s-2)" data-i18n="data.format.hint"></p>
+          <ol style="margin-top:var(--s-2); padding-inline-start:var(--s-5); color:var(--ink-muted)" id="data-format-list"></ol>
+        </div>
+      </section>
+
+    </main>
+  </div>
+</div>
+
+<!-- Drill drawer -->
+<div class="drawer" id="drill-drawer" aria-hidden="true">
+  <div class="drawer__panel" role="dialog">
+    <div class="drawer__head">
+      <div>
+        <div class="drawer__eyebrow" id="drill-eyebrow">—</div>
+        <h2 id="drill-title" class="drawer__title">—</h2>
+        <div id="drill-chips" class="drawer__chips"></div>
+      </div>
+      <div style="display:flex; gap:6px">
+        <button class="btn btn--ghost btn--small" id="drill-export">
+          <svg class="icon"><use href="#i-download"/></svg> <span data-i18n="action.export"></span>
+        </button>
+        <button class="icon-btn" id="drill-close" aria-label="Close">
+          <svg class="icon"><use href="#i-close"/></svg>
+        </button>
+      </div>
+    </div>
+    <div class="drawer__body" id="drill-body">…</div>
+  </div>
+</div>
+
+<!-- Upload modal -->
+<div class="modal" id="upload-modal" aria-hidden="true">
+  <div class="modal__panel" role="dialog">
+    <div class="modal__head">
+      <h2 class="modal__title" data-i18n="upload.title"></h2>
+      <button class="icon-btn" id="upload-close" aria-label="Close"><svg class="icon"><use href="#i-close"/></svg></button>
+    </div>
+    <div class="modal__body">
+      <p style="color:var(--ink-muted); margin-top:0" data-i18n="upload.note"></p>
+      <label class="dropzone" id="dropzone">
+        <input type="file" id="file-input" accept=".xlsx" hidden>
+        <svg class="dropzone__icon"><use href="#i-upload"/></svg>
+        <div class="dropzone__title" data-i18n="upload.drop"></div>
+        <div class="dropzone__hint" data-i18n="upload.hint"></div>
+        <div id="file-chosen" class="dropzone__file"></div>
+      </label>
+      <div id="upload-progress" class="upload-progress" hidden>
+        <div class="upload-progress__bar"><div class="upload-progress__fill" id="upload-bar"></div></div>
+        <div class="upload-progress__label" id="upload-status"></div>
+      </div>
+      <div id="upload-result" class="upload-result" hidden></div>
+    </div>
+    <div class="modal__foot">
+      <button class="btn btn--ghost" id="upload-cancel" data-i18n="action.cancel"></button>
+      <button class="btn btn--primary" id="upload-submit" disabled data-i18n="upload.submit"></button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ====== i18n =========================================================== */
+const I18N = {
+  ar: {
+    'app.title':'منصة تحليل مشاركات المستفيدين',
+    'app.subtitle':'تحليل ذكي لمشاركات المستفيدين بالقنوات الرقمية',
+    'action.upload':'رفع ملف','action.reprocess':'إعادة المعالجة',
+    'action.export':'تصدير','action.cancel':'إلغاء',
+    'status.loading':'جاري التحميل','status.engine':'محرّك التحليل',
+    'nav.title':'الأقسام','nav.overview':'نظرة عامة','nav.patterns':'الأنماط والاتجاهات',
+    'nav.alerts':'الإنذار المبكر','nav.actions':'الإجراءات المقترحة','nav.qa':'استعلام حر',
+    'nav.data':'إدارة البيانات',
+    'filters.title':'عوامل التصفية','filters.from':'من','filters.to':'إلى',
+    'filters.category':'الفئة','filters.severity':'الخطورة','filters.search':'بحث في النصوص',
+    'filters.toggle':'تحديد/إلغاء الكل','filters.reset':'إعادة تعيين',
+    'overview.title':'نظرة عامة','overview.subtitle':'مؤشرات أداء قنوات المشاركة والرؤى المستخلصة من بيانات المستفيدين خلال الفترة المحددة.',
+    'overview.insights':'رؤى عملية مقترحة','overview.insights.hint':'يحلّل النظام كامل البيانات لاستخراج توصيات قابلة للتنفيذ هذا الأسبوع.',
+    'patterns.title':'الأنماط والاتجاهات','patterns.subtitle':'الموضوعات المتكرّرة، اتجاهات الخطورة عبر الزمن، والموضوعات المتصاعدة في الفترة الأخيرة.',
+    'alerts.title':'الإنذار المبكر','alerts.subtitle':'ارتفاعات غير معتادة في الفئات أو الموضوعات خلال آخر أسبوع، مع توصية تحسين استباقية.',
+    'actions.title':'الإجراءات المقترحة','actions.subtitle':'تصنيف ذكي لكل طلب مع تبرير مستوى الخطورة وإجراء قابل للاعتماد.',
+    'actions.high_only':'الخطورة العالية فقط',
+    'qa.title':'استعلام حر — اسأل البيانات','qa.subtitle':'اطرح سؤالاً بلغة طبيعية على الشريحة المُصفّاة.',
+    'qa.label':'سؤالك','qa.placeholder':'مثال: ما أبرز ثلاثة مواضيع تستحق تحسيناً استباقياً؟',
+    'qa.submit':'اسأل','qa.answer':'الإجابة','qa.context_toggle':'عرض ملخّص البيانات المستخدمة كسياق',
+    'data.title':'إدارة البيانات','data.subtitle':'رفع ملفات Excel جديدة لإضافتها إلى البيانات الحالية. يتم الدمج مع إزالة التكرارات.',
+    'data.files':'الملفات المُدخلة','data.col.name':'اسم الملف','data.col.size':'الحجم','data.col.added':'تاريخ الإضافة',
+    'data.format':'صيغة الملف المطلوبة','data.format.hint':'يجب أن يحتوي الملف على الأعمدة التالية بالترتيب:',
+    'data.format.id':'الرقم — رقم الطلب الفريد','data.format.type':'الطلب — نوع الطلب',
+    'data.format.cat':'العنوان — فئة الطلب (شكوى / استفسار / اقتراح / دعم فني / خدمة مراجع)',
+    'data.format.body':'نص الطلب — وصف موجز','data.format.date':'تاريخ الانتهاء — تاريخ إغلاق الطلب',
+    'col.id':'رقم الطلب','col.body':'نص الطلب','col.category':'الفئة','col.topic':'الموضوع',
+    'col.severity':'الخطورة','col.severity_reason':'تبرير الخطورة','col.action':'الإجراء المقترح','col.closed':'تاريخ الإغلاق',
+    'sev.high':'عالية','sev.med':'متوسطة','sev.low':'منخفضة',
+    'chart.weekly':'تطور حجم الطلبات أسبوعياً',
+    'chart.categories':'التوزيع حسب الفئة',
+    'chart.severity':'التوزيع حسب الخطورة',
+    'chart.severity.hint':'الخطورة مُستنبطة من تحليل النص والفئة لكل طلب.',
+    'chart.forecast':'توقّع الأسبوعين القادمين',
+    'chart.forecast.hint':'تنبؤ مبني على تنعيم أسّي ضمن نطاق ثقة.',
+    'chart.topics':'أعلى ١٠ مواضيع تكراراً',
+    'chart.topics.hint':'يدلّ اللون على نسبة الخطورة العالية في كل موضوع.',
+    'chart.severity_weekly':'اتجاه الخطورة عبر الأسابيع',
+    'chart.momentum':'موضوعات متصاعدة','chart.momentum.hint':'آخر ٤ أسابيع مقابل الفترة المماثلة قبلها.',
+    'chart.weekly_cat':'الاتجاه الأسبوعي حسب الفئة',
+    'chart.matrix':'مصفوفة الفئة × الخطورة','chart.matrix.hint':'اضغط على الخلية للتفاصيل.',
+    'chart.recurring':'حالات متكرّرة','chart.recurring.hint':'طلبات بنص متطابق تكرّر — قد تشير إلى مستفيد متكرر أو مشكلة منهجية.',
+    'caption.weekly':'بلغ الذروة في أسبوع {peak} ({peakv} طلب). متوسط أسبوعي: {avg} طلب.',
+    'caption.cats':'{top} هي الفئة الأكبر بنسبة {topPct}، وأقل الفئات تمثيلاً «{low}» بنسبة {lowPct}.',
+    'caption.sev':'{high} من الطلبات بخطورة عالية. كلما ارتفعت النسبة، زادت الحاجة للتدخل المباشر.',
+    'caption.fc':'متوقّع الأسبوع القادم: {next} طلب (مقابل {last} في الأسبوع الأخير، نطاق ثقة {lo}–{hi}).',
+    'caption.topics':'الموضوع الأبرز «{name}» بـ{count} طلب وخطورة عالية {high}.',
+    'caption.sevW':'الخطورة العالية تشكّل {pct} من الإجمالي خلال الفترة. الاتجاه: {trend}.',
+    'caption.weeklyCat':'الفئات تعرض اتجاهات متباينة عبر الأسابيع.',
+    'caption.matrix':'تركيز الخطورة العالية في {pair}.',
+    'trend.up':'تصاعد','trend.down':'انحسار','trend.flat':'مستقر',
+    'kpi.total':'إجمالي الطلبات','kpi.complaints':'نسبة الشكاوى',
+    'kpi.high':'الخطورة العالية','kpi.cats':'الفئات النشطة',
+    'kpi.delta.up':'↑ {pct} مقابل المتوسط الأسبوعي','kpi.delta.down':'↓ {pct} مقابل المتوسط الأسبوعي',
+    'kpi.delta.na':'غير متاح',
+    'insight.tag.evidence':'الملاحظة','insight.tag.action':'الإجراء','insight.tag.metric':'المقياس',
+    'drawer.eyebrow':'السجلات المرتبطة',
+    'drawer.records':'{n} سجل مطابق · معروض {m}',
+    'drawer.empty':'لا توجد سجلات مطابقة.',
+    'drawer.topic':'الموضوع','drawer.severity_reason':'تبرير الخطورة','drawer.action':'الإجراء المقترح',
+    'upload.title':'رفع ملف Excel جديد','upload.note':'سيتم دمج الملف مع البيانات الموجودة. الطلبات بنفس الرقم لن تتكرّر.',
+    'upload.drop':'اسحب الملف هنا، أو اضغط للاختيار','upload.hint':'صيغة .xlsx فقط — حد أقصى 50 ميغابايت',
+    'upload.uploading':'جارٍ رفع الملف…','upload.processing':'جارٍ التحليل والتصنيف…',
+    'upload.success':'تمّت المعالجة بنجاح','upload.submit':'رفع ومعالجة',
+    'engine.groq':'Groq متاح','engine.ollama':'النموذج المحلي متاح','engine.rule':'الوضع الآمن — تحليلات قاعدية',
+    'examples.q1':'ما أبرز ثلاثة مواضيع تستحق تحسيناً استباقياً؟',
+    'examples.q2':'هل هناك تصاعد في شكاوى السداد؟',
+    'examples.q3':'ما الفئات الأقل شيوعاً ولماذا قد نتجاهلها؟',
+    'na':'—','of':'من','records':'سجل','request':'طلب',
+  },
+  en: {
+    'app.title':'Beneficiary Engagement Analytics',
+    'app.subtitle':'Intelligent analysis of beneficiary submissions across digital channels',
+    'action.upload':'Upload file','action.reprocess':'Reprocess',
+    'action.export':'Export','action.cancel':'Cancel',
+    'status.loading':'Loading','status.engine':'AI engine',
+    'nav.title':'Sections','nav.overview':'Overview','nav.patterns':'Patterns & Trends',
+    'nav.alerts':'Early warning','nav.actions':'Suggested actions','nav.qa':'Free query',
+    'nav.data':'Data management',
+    'filters.title':'Filters','filters.from':'From','filters.to':'To',
+    'filters.category':'Category','filters.severity':'Severity','filters.search':'Search text',
+    'filters.toggle':'Select / clear all','filters.reset':'Reset',
+    'overview.title':'Overview','overview.subtitle':'Channel performance KPIs and AI-derived insights from beneficiary submissions in the selected period.',
+    'overview.insights':'Actionable insights','overview.insights.hint':'AI scans all submissions to surface concrete actions for this week.',
+    'patterns.title':'Patterns & trends','patterns.subtitle':'Recurring topics, severity trends over time, and rising themes in the recent period.',
+    'alerts.title':'Early warning','alerts.subtitle':'Unusual spikes in categories or topics in the latest week, with proactive recommendations.',
+    'actions.title':'Suggested actions','actions.subtitle':'AI-classified records with severity justification and an actionable next step.',
+    'actions.high_only':'High severity only',
+    'qa.title':'Ask the data','qa.subtitle':'Ask a natural-language question over the filtered slice.',
+    'qa.label':'Your question','qa.placeholder':'e.g. Which three topics most warrant proactive improvement?',
+    'qa.submit':'Ask','qa.answer':'Answer','qa.context_toggle':'Show data summary used as context',
+    'data.title':'Data management','data.subtitle':'Upload new Excel files to merge with the existing dataset. Duplicates by request ID are removed.',
+    'data.files':'Source files','data.col.name':'File name','data.col.size':'Size','data.col.added':'Added',
+    'data.format':'Required file format','data.format.hint':'The file must contain the following columns in order:',
+    'data.format.id':'Number — unique request ID','data.format.type':'Type — request type',
+    'data.format.cat':'Title — request category (Complaint / Inquiry / Suggestion / Tech support / Reviewer service)',
+    'data.format.body':'Body — short description','data.format.date':'Closed date — when the request was resolved',
+    'col.id':'Request ID','col.body':'Body','col.category':'Category','col.topic':'Topic',
+    'col.severity':'Severity','col.severity_reason':'Severity reason','col.action':'Recommended action','col.closed':'Closed at',
+    'sev.high':'High','sev.med':'Medium','sev.low':'Low',
+    'chart.weekly':'Weekly request volume',
+    'chart.categories':'By category',
+    'chart.severity':'By severity',
+    'chart.severity.hint':'Severity is derived from the body text and category for each request.',
+    'chart.forecast':'Two-week forecast',
+    'chart.forecast.hint':'Exponential smoothing forecast with a confidence band.',
+    'chart.topics':'Top 10 recurring topics',
+    'chart.topics.hint':'Color encodes the share of high-severity records within each topic.',
+    'chart.severity_weekly':'Severity trend over weeks',
+    'chart.momentum':'Rising topics','chart.momentum.hint':'Last 4 weeks vs the prior 4-week period.',
+    'chart.weekly_cat':'Weekly trend by category',
+    'chart.matrix':'Category × severity matrix','chart.matrix.hint':'Click a cell to drill down.',
+    'chart.recurring':'Recurring cases','chart.recurring.hint':'Requests with identical text — possible repeat beneficiary or systemic issue.',
+    'caption.weekly':'Peaked in the week of {peak} ({peakv} requests). Weekly average: {avg}.',
+    'caption.cats':'{top} is the largest category at {topPct}; the smallest is "{low}" at {lowPct}.',
+    'caption.sev':'{high} of all requests are high severity — the higher this gets, the more direct intervention is needed.',
+    'caption.fc':'Next week forecast: {next} requests (vs {last} last week; confidence band {lo}–{hi}).',
+    'caption.topics':'The leading topic "{name}" has {count} requests with {high} high-severity.',
+    'caption.sevW':'High severity is {pct} of total in the period. Trend: {trend}.',
+    'caption.weeklyCat':'Categories show divergent trends across weeks.',
+    'caption.matrix':'High-severity concentrates in {pair}.',
+    'trend.up':'rising','trend.down':'declining','trend.flat':'stable',
+    'kpi.total':'Total requests','kpi.complaints':'Complaints share',
+    'kpi.high':'High severity','kpi.cats':'Active categories',
+    'kpi.delta.up':'↑ {pct} vs weekly average','kpi.delta.down':'↓ {pct} vs weekly average',
+    'kpi.delta.na':'unavailable',
+    'insight.tag.evidence':'Observation','insight.tag.action':'Action','insight.tag.metric':'Metric',
+    'drawer.eyebrow':'Matching records',
+    'drawer.records':'{n} matching · showing {m}',
+    'drawer.empty':'No matching records.',
+    'drawer.topic':'Topic','drawer.severity_reason':'Severity reason','drawer.action':'Recommended action',
+    'upload.title':'Upload a new Excel file','upload.note':'The file will be merged with existing data. Requests with the same ID will not be duplicated.',
+    'upload.drop':'Drag a file here, or click to choose','upload.hint':'.xlsx only — 50 MB max',
+    'upload.uploading':'Uploading…','upload.processing':'Analyzing & classifying…',
+    'upload.success':'Processed successfully','upload.submit':'Upload & process',
+    'engine.groq':'Groq available','engine.ollama':'Local model available','engine.rule':'Safe mode — rule-based',
+    'examples.q1':'Which three topics most warrant proactive improvement?',
+    'examples.q2':'Is there an upward trend in payment complaints?',
+    'examples.q3':'Which categories are least common and why might we deprioritize them?',
+    'na':'—','of':'of','records':'records','request':'requests',
+  },
+};
+
+let LANG = (localStorage.getItem('adf.lang') || 'ar');
+function t(key, vars) {
+  let s = (I18N[LANG][key] ?? key);
+  if (vars) Object.entries(vars).forEach(([k, v]) => { s = s.replaceAll('{'+k+'}', v); });
+  return s;
+}
+function applyI18n() {
+  document.documentElement.lang = LANG;
+  document.documentElement.dir = LANG === 'ar' ? 'rtl' : 'ltr';
+  document.body.classList.toggle('lang-en', LANG === 'en');
+  qsa('[data-i18n]').forEach(el => { el.textContent = t(el.dataset.i18n); });
+  qs('#lang-label').textContent = LANG === 'ar' ? 'EN' : 'AR';
+  qs('#qa-input').setAttribute('placeholder', t('qa.placeholder'));
+  qs('#filter-search').setAttribute('placeholder', t('filters.search'));
+  // example buttons + format list
+  qs('#qa-examples').innerHTML = ['examples.q1','examples.q2','examples.q3']
+    .map(k => `<button class="btn btn--ghost btn--small qa-example">${t(k)}</button>`).join('');
+  qsa('.qa-example').forEach(b => b.addEventListener('click', () => { qs('#qa-input').value = b.textContent.trim(); }));
+  qs('#data-format-list').innerHTML = ['data.format.id','data.format.type','data.format.cat','data.format.body','data.format.date']
+    .map(k => `<li>${t(k)}</li>`).join('');
+}
+
+/* ====== Number formatting ============================================== */
+const _AR_DIGITS = '٠١٢٣٤٥٦٧٨٩';
+function toAr(s) { return String(s ?? '').replace(/[0-9]/g, d => _AR_DIGITS[+d]); }
+function nm(n) { // localized numeric for current language
+  if (n == null) return t('na');
+  const s = Number(n).toLocaleString('en-US');
+  return LANG === 'ar' ? toAr(s) : s;
+}
+function fmtInt(n) { return nm(n); }
+function fmtPct(n) {
+  if (n == null) return t('na');
+  const s = Number(n).toFixed(1);
+  return LANG === 'ar' ? toAr(s)+'٪' : s+'%';
+}
+function fmtDate(s) {
+  if (!s) return t('na');
+  return LANG === 'ar' ? toAr(s) : s;
+}
+
+const qs  = (sel, root = document) => root.querySelector(sel);
+const qsa = (sel, root = document) => Array.from(root.querySelectorAll(sel));
+const escapeHtml = (s) => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+const SEV_KEY = (v) => v === 'عالية' ? 'sev.high' : v === 'متوسطة' ? 'sev.med' : 'sev.low';
+const SEV_LABEL = (v) => t(SEV_KEY(v));
+
+/* ====== State + plotly helpers ========================================= */
+const DGA = {
+  primary:'#26634B', primaryShade:'#144D3F', primaryTint:'#27AA8C',
+  secondary:'#005A96', warning:'#B07800', danger:'#AF0818', success:'#006604',
+  ink:'#1A1A1A', inkMuted:'#5A5A5A', line:'#E4E6E8', canvas:'#F5F6F7',
+};
+const CATEGORY_PALETTE = [DGA.primary, DGA.secondary, DGA.primaryTint, '#8A6500', '#5505CD', '#0AEBD7'];
+const SEVERITY_COLORS = { 'عالية': DGA.danger, 'متوسطة': DGA.warning, 'منخفضة': DGA.success };
+function plotlyFont() {
+  return { family:'Noto Naskh Arabic, Noto Sans Arabic, IBM Plex Sans, system-ui, sans-serif',
+           color:DGA.ink, size:12 };
+}
+function plotlyBase() {
+  return {
+    font: plotlyFont(),
+    paper_bgcolor:'rgba(0,0,0,0)', plot_bgcolor:'rgba(0,0,0,0)',
+    margin:{ t:8, r:10, b:40, l:40 },
+    xaxis:{ gridcolor:DGA.line, zerolinecolor:DGA.line, color:DGA.inkMuted, tickfont:{ size:11 }, automargin:true },
+    yaxis:{ gridcolor:DGA.line, zerolinecolor:DGA.line, color:DGA.inkMuted, tickfont:{ size:11 }, automargin:true },
+    hoverlabel:{ bgcolor:'#fff', bordercolor:DGA.line, font: plotlyFont() },
+    legend:{ font: plotlyFont(), orientation:'h', y:-0.18 },
+  };
+}
+const PLOTLY_CONFIG = { displayModeBar:false, responsive:true };
+
+const state = {
+  meta:null,
+  filters:{ from:'', to:'', categories:[], severities:[], search:'' },
+  page:'overview',
+  refreshTimer:null,
+  cache:{ kpis:null, weekly:null, cats:null, sev:null, topics:null, fc:null, sevW:null, momentum:null, matrix:null, recur:null },
+};
+
+function buildQuery() {
+  const p = new URLSearchParams();
+  if (state.filters.from) p.set('from', state.filters.from);
+  if (state.filters.to)   p.set('to',   state.filters.to);
+  state.filters.categories.forEach(c => p.append('category', c));
+  state.filters.severities.forEach(s => p.append('severity', s));
+  if (state.filters.search) p.set('body_contains', state.filters.search);
+  return p.toString();
+}
+async function api(path) {
+  const sep = path.includes('?') ? '&' : '?';
+  const q = buildQuery();
+  const r = await fetch(q ? `${path}${sep}${q}` : path);
+  if (!r.ok) throw new Error(`${path} → ${r.status}`);
+  return r.json();
+}
+
+/* ====== Bootstrap ===================================================== */
+async function bootstrap() {
+  applyI18n();
+
+  const health = await fetch('/api/health').then(r=>r.json());
+  setHealth(health);
+
+  if (!health.ready) {
+    showEmptyState();
+    bindUpload();
+    return;
+  }
+
+  state.meta = await fetch('/api/meta').then(r=>r.json());
+  qs('#filter-from').value = state.meta.date_min;
+  qs('#filter-to').value   = state.meta.date_max;
+  qs('#filter-from').min = qs('#filter-to').min = state.meta.date_min;
+  qs('#filter-from').max = qs('#filter-to').max = state.meta.date_max;
+  state.filters.from = state.meta.date_min;
+  state.filters.to   = state.meta.date_max;
+
+  renderChecks('#filter-cats', state.meta.categories, 'categories');
+  renderChecks('#filter-sev',  state.meta.severities, 'severities');
+
+  bindNav(); bindFilters(); bindActions(); bindQA(); bindUpload(); bindDataPage();
+  bindLang(); bindDrill(); bindDrillTriggers();
+
+  await refreshAll();
+  bindPlotlyClicks();
+}
+
+function setHealth(h) {
+  const pill = qs('#health-pill');
+  pill.className = 'pill ' + (h.ready ? 'pill--low' : 'pill--med');
+  pill.innerHTML = `<span class="pill__dot"></span> ${h.ready ? `${fmtInt(h.rows)} ${t('records')}` : t('drawer.empty')}`;
+  // engine status
+  const ai = qs('#ai-status');
+  let key = 'engine.rule';
+  if (h.groq_available) key = 'engine.groq';
+  else if (h.ollama_available) key = 'engine.ollama';
+  ai.className = 'pill ' + (key==='engine.rule' ? 'pill--ghost' : 'pill--low');
+  ai.innerHTML = `<span class="pill__dot"></span> ${t(key)}`;
+}
+function showEmptyState() {
+  qs('.main').innerHTML = `<div class="empty">
+    <div class="empty__title">${t('overview.title')}</div>
+    <p>${t('drawer.empty')}</p>
+    <button class="btn btn--primary" id="btn-upload"><svg class="icon"><use href="#i-upload"/></svg> ${t('action.upload')}</button>
+  </div>`;
+}
+
+function renderChecks(sel, items, key) {
+  const root = qs(sel);
+  root.innerHTML = items.map(v =>
+    `<label class="check is-on" data-val="${escapeHtml(v)}"><input type="checkbox" checked>${escapeHtml(v)}</label>`
+  ).join('');
+  state.filters[key] = items.slice();
+  qsa('label.check', root).forEach(el => {
+    el.addEventListener('click', (e) => {
+      e.preventDefault();
+      const v = el.dataset.val;
+      const arr = state.filters[key];
+      if (el.classList.contains('is-on')) {
+        el.classList.remove('is-on');
+        state.filters[key] = arr.filter(x => x !== v);
+      } else {
+        el.classList.add('is-on');
+        state.filters[key] = arr.concat(v);
+      }
+      scheduleRefresh();
+    });
+  });
+}
+
+function bindFilters() {
+  ['filter-from','filter-to'].forEach(id => {
+    qs('#'+id).addEventListener('change', () => {
+      state.filters.from = qs('#filter-from').value;
+      state.filters.to   = qs('#filter-to').value;
+      scheduleRefresh();
+    });
+  });
+  qs('#filter-search').addEventListener('input', () => {
+    state.filters.search = qs('#filter-search').value.trim();
+    scheduleRefresh();
+  });
+  qs('#reset-filters').addEventListener('click', () => {
+    qs('#filter-from').value = state.meta.date_min;
+    qs('#filter-to').value   = state.meta.date_max;
+    qs('#filter-search').value = '';
+    state.filters = { from: state.meta.date_min, to: state.meta.date_max,
+                      categories: state.meta.categories.slice(),
+                      severities: state.meta.severities.slice(), search: '' };
+    qsa('#filter-cats label.check').forEach(el => el.classList.add('is-on'));
+    qsa('#filter-sev  label.check').forEach(el => el.classList.add('is-on'));
+    scheduleRefresh();
+  });
+  qsa('[data-toggle-group]').forEach(b => b.addEventListener('click', (e) => {
+    e.preventDefault();
+    const grp = b.dataset.toggleGroup;
+    const sel = grp === 'categories' ? '#filter-cats' : '#filter-sev';
+    const items = qsa(sel + ' label.check');
+    const allOn = items.every(el => el.classList.contains('is-on'));
+    items.forEach(el => el.classList.toggle('is-on', !allOn));
+    state.filters[grp] = allOn ? [] : (grp === 'categories' ? state.meta.categories.slice() : state.meta.severities.slice());
+    scheduleRefresh();
+  }));
+}
+
+function scheduleRefresh() {
+  updateFilterStateLine();
+  clearTimeout(state.refreshTimer);
+  state.refreshTimer = setTimeout(refreshAll, 250);
+}
+function updateFilterStateLine() {
+  if (!state.meta) return;
+  const c = state.filters.categories.length, s = state.filters.severities.length;
+  const allCats = state.meta.categories.length, allSev = state.meta.severities.length;
+  const parts = [
+    `${fmtDate(state.filters.from)} ← ${fmtDate(state.filters.to)}`,
+    `${t('filters.category')} ${fmtInt(c)}/${fmtInt(allCats)}`,
+    `${t('filters.severity')} ${fmtInt(s)}/${fmtInt(allSev)}`,
+  ];
+  if (state.filters.search) parts.push(`${t('filters.search')}: ${state.filters.search}`);
+  qs('#filter-state').textContent = parts.join(' · ');
+}
+
+function bindNav() {
+  qsa('#nav .nav__item').forEach(item => {
+    item.addEventListener('click', async () => {
+      qsa('#nav .nav__item').forEach(x => x.classList.remove('is-active'));
+      item.classList.add('is-active');
+      const p = item.dataset.page;
+      qsa('.page').forEach(s => s.classList.toggle('is-visible', s.dataset.page === p));
+      state.page = p;
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      if (p === 'data') await loadFiles();
+    });
+  });
+}
+function bindActions() {
+  qs('#actions-only-high').addEventListener('click', async (e) => {
+    e.preventDefault();
+    const cb = qs('#actions-only-high input');
+    cb.checked = !cb.checked;
+    qs('#actions-only-high').classList.toggle('is-on', cb.checked);
+    await loadActions();
+  });
+}
+function bindLang() {
+  qs('#btn-lang').addEventListener('click', () => {
+    LANG = LANG === 'ar' ? 'en' : 'ar';
+    localStorage.setItem('adf.lang', LANG);
+    applyI18n();
+    refreshAll();
+  });
+}
+function bindQA() {
+  qs('#qa-submit').addEventListener('click', async () => {
+    const q = qs('#qa-input').value.trim();
+    if (!q) return;
+    qs('#qa-answer').style.display = 'block';
+    qs('#qa-answer-body').innerHTML =
+      '<div class="skeleton" style="height:14px;width:100%;margin-bottom:8px"></div>' +
+      '<div class="skeleton" style="height:14px;width:80%;margin-bottom:8px"></div>' +
+      '<div class="skeleton" style="height:14px;width:60%"></div>';
+    const body = {
+      question: q, language: LANG,
+      date_from: state.filters.from || null, date_to: state.filters.to || null,
+      category: state.filters.categories, severity: state.filters.severities,
+    };
+    const r = await fetch('/api/qa', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) });
+    const data = await r.json();
+    qs('#qa-answer-body').textContent = data.answer;
+    qs('#qa-context').textContent = data.context;
+    qs('#qa-source-pill').textContent = data.source || '';
+  });
+}
+
+/* ====== Drill drawer ================================================== */
+const drill = { open:false, params:null };
+async function openDrill({ title, eyebrow, category=null, severity=null, topic=null, body_contains=null, week_start=null, only_high=false }) {
+  drill.open = true;
+  drill.params = { category, severity, topic, body_contains, week_start, only_high };
+  qs('#drill-drawer').classList.add('is-open');
+  qs('#drill-eyebrow').textContent = eyebrow || t('drawer.eyebrow');
+  qs('#drill-title').textContent = title;
+  qs('#drill-body').innerHTML = `<div class="drill-empty">${t('status.loading')}…</div>`;
+  const chips = [];
+  if (category) chips.push(`${t('col.category')}: ${category}`);
+  if (severity) chips.push(`${t('col.severity')}: ${SEV_LABEL(severity)}`);
+  if (topic) chips.push(`${t('col.topic')}: ${topic}`);
+  if (week_start) chips.push(`${fmtDate(week_start)}`);
+  if (only_high) chips.push(t('actions.high_only'));
+  if (body_contains) chips.push(`«${body_contains}»`);
+  qs('#drill-chips').innerHTML = chips.map(c => `<span class="pill pill--ghost">${escapeHtml(c)}</span>`).join('');
+  const data = await drillFetch({ page:1, page_size:100 });
+  renderDrillRows(data);
+}
+function drillBuildQuery(extra={}) {
+  const p = new URLSearchParams();
+  if (state.filters.from) p.set('from', state.filters.from);
+  if (state.filters.to)   p.set('to',   state.filters.to);
+  state.filters.categories.forEach(c => p.append('category', c));
+  state.filters.severities.forEach(s => p.append('severity', s));
+  if (state.filters.search) p.set('body_contains', state.filters.search);
+  const dp = drill.params || {};
+  if (dp.category) { p.delete('category'); p.append('category', dp.category); }
+  if (dp.severity) { p.delete('severity'); p.append('severity', dp.severity); }
+  if (dp.topic) p.append('topic', dp.topic);
+  if (dp.body_contains) p.set('body_contains', dp.body_contains);
+  if (dp.week_start) p.set('week_start', dp.week_start);
+  if (dp.only_high) p.set('only_high', 'true');
+  Object.entries(extra).forEach(([k,v]) => p.set(k, v));
+  return p.toString();
+}
+async function drillFetch({ page, page_size }) {
+  const q = drillBuildQuery({ page, page_size });
+  const r = await fetch(`/api/records?${q}`);
+  return r.json();
+}
+function renderDrillRows(data) {
+  const body = qs('#drill-body');
+  if (!data.rows || !data.rows.length) {
+    body.innerHTML = `<div class="drill-empty">${t('drawer.empty')}</div>`;
+    return;
+  }
+  body.innerHTML = `<div class="drill-meta">${t('drawer.records', { n: fmtInt(data.total), m: fmtInt(data.rows.length) })}</div>` +
+    data.rows.map(r => {
+      const sevClass = r.severity === 'عالية' ? 'pill--high' : r.severity === 'متوسطة' ? 'pill--med' : 'pill--low';
+      return `<div class="drill-row">
+        <div class="drill-row__head">
+          <span class="pill ${sevClass}">${escapeHtml(SEV_LABEL(r.severity))}</span>
+          <span class="drill-row__cat">${escapeHtml(r.category)}</span>
+          <span class="drill-row__id">#${nm(r.request_id)}</span>
+          <span class="drill-row__id">${fmtDate(r.closed_at)}</span>
+        </div>
+        <div class="drill-row__body">${escapeHtml(r.body || t('na'))}</div>
+        <div class="drill-row__why"><strong>${t('drawer.topic')}:</strong> ${escapeHtml(r.topic_label || t('na'))}</div>
+        <div class="drill-row__why"><strong>${t('drawer.severity_reason')}:</strong> ${LANG==='ar'?toAr(escapeHtml(r.severity_reason || t('na'))):escapeHtml(r.severity_reason || t('na'))}</div>
+        <div class="drill-row__action"><strong>${t('drawer.action')}:</strong> ${LANG==='ar'?toAr(escapeHtml(r.recommended_action)):escapeHtml(r.recommended_action)}</div>
+      </div>`;
+    }).join('');
+}
+function bindDrill() {
+  qs('#drill-close').addEventListener('click', closeDrill);
+  qs('#drill-drawer').addEventListener('click', (e) => { if (e.target.id === 'drill-drawer') closeDrill(); });
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && drill.open) closeDrill(); });
+  qs('#drill-export').addEventListener('click', () => {
+    const q = drillBuildQuery({ page:1, page_size:5000 });
+    window.open(`/api/records?${q}`, '_blank');
+  });
+}
+function closeDrill() {
+  qs('#drill-drawer').classList.remove('is-open');
+  drill.open = false;
+}
+function bindDrillTriggers() {
+  qs('#kpi-grid').addEventListener('click', (e) => {
+    const card = e.target.closest('.kpi[data-drill]');
+    if (!card) return;
+    const k = card.dataset.drill;
+    if (k === 'total') openDrill({ title: t('kpi.total') });
+    else if (k === 'complaints') openDrill({ title: t('kpi.complaints'), category: 'شكوى' });
+    else if (k === 'high') openDrill({ title: t('kpi.high'), severity: 'عالية' });
+  });
+}
+function bindPlotlyClicks() {
+  const handlers = {
+    'chart-categories': (pt) => openDrill({ title: pt.label, category: pt.label }),
+    'chart-severity':   (pt) => openDrill({ title: SEV_LABEL(pt.y), severity: pt.y }),
+    'chart-topics':     (pt) => openDrill({ title: pt.y, topic: pt.y }),
+    'chart-matrix':     (pt) => openDrill({ title: `${pt.y} · ${SEV_LABEL(pt.x)}`, category: pt.y, severity: pt.x }),
+    'chart-weekly':     (pt) => openDrill({ title: fmtDate(pt.x), week_start: pt.x }),
+  };
+  Object.entries(handlers).forEach(([id, fn]) => {
+    const el = document.getElementById(id);
+    if (el && el.on) el.on('plotly_click', (ev) => { const pt = ev.points && ev.points[0]; if (pt) fn(pt); });
+  });
+}
+
+/* ====== Upload + data ================================================ */
+function openUploadModal() {
+  qs('#upload-modal').classList.add('is-open');
+  qs('#upload-result').hidden = true;
+  qs('#upload-progress').hidden = true;
+  qs('#file-chosen').textContent = '';
+  qs('#upload-submit').disabled = true;
+  qs('#file-input').value = '';
+}
+function closeUploadModal() { qs('#upload-modal').classList.remove('is-open'); }
+function bindUpload() {
+  const b1 = qs('#btn-upload'), b2 = qs('#btn-upload-2');
+  if (b1) b1.addEventListener('click', openUploadModal);
+  if (b2) b2.addEventListener('click', openUploadModal);
+  qs('#upload-close').addEventListener('click', closeUploadModal);
+  qs('#upload-cancel').addEventListener('click', closeUploadModal);
+  const dz = qs('#dropzone'), input = qs('#file-input');
+  dz.addEventListener('click', () => input.click());
+  dz.addEventListener('dragover', (e) => { e.preventDefault(); dz.classList.add('is-drag'); });
+  dz.addEventListener('dragleave', () => dz.classList.remove('is-drag'));
+  dz.addEventListener('drop', (e) => {
+    e.preventDefault(); dz.classList.remove('is-drag');
+    if (e.dataTransfer.files.length) { input.files = e.dataTransfer.files; onFileChosen(); }
+  });
+  input.addEventListener('change', onFileChosen);
+  function onFileChosen() {
+    const f = input.files[0];
+    if (!f) { qs('#upload-submit').disabled = true; return; }
+    qs('#file-chosen').textContent = `${f.name} — ${nm(Math.round(f.size/1024))} KB`;
+    qs('#upload-submit').disabled = false;
+  }
+  qs('#upload-submit').addEventListener('click', async () => {
+    const f = input.files[0]; if (!f) return;
+    qs('#upload-progress').hidden = false; qs('#upload-result').hidden = true;
+    qs('#upload-submit').disabled = true; qs('#upload-cancel').disabled = true;
+    const fd = new FormData(); fd.append('file', f);
+    try {
+      qs('#upload-status').textContent = t('upload.uploading');
+      qs('#upload-bar').style.width = '40%';
+      const r = await fetch('/api/upload', { method:'POST', body: fd });
+      qs('#upload-bar').style.width = '85%';
+      qs('#upload-status').textContent = t('upload.processing');
+      const data = await r.json();
+      if (!r.ok) throw new Error(data.detail || 'failed');
+      qs('#upload-bar').style.width = '100%';
+      qs('#upload-result').hidden = false;
+      qs('#upload-result').className = 'upload-result upload-result--ok';
+      qs('#upload-result').innerHTML = `<strong>${t('upload.success')}</strong>`;
+      setTimeout(() => { closeUploadModal(); window.location.reload(); }, 900);
+    } catch (err) {
+      qs('#upload-result').hidden = false;
+      qs('#upload-result').className = 'upload-result upload-result--err';
+      qs('#upload-result').textContent = err.message;
+      qs('#upload-progress').hidden = true;
+      qs('#upload-cancel').disabled = false; qs('#upload-submit').disabled = false;
+    }
+  });
+}
+function bindDataPage() {
+  qs('#btn-refresh').addEventListener('click', async () => {
+    qs('#btn-refresh').disabled = true;
+    try {
+      const r = await fetch('/api/refresh', { method:'POST' });
+      if (!r.ok) throw new Error('failed');
+      window.location.reload();
+    } catch (err) { alert(err.message); qs('#btn-refresh').disabled = false; }
+  });
+}
+async function loadFiles() {
+  const data = await fetch('/api/files').then(r=>r.json());
+  qs('#files-meta').textContent = `${fmtInt(data.files.length)}`;
+  qs('#files-tbody').innerHTML = data.files.length
+    ? data.files.map(f => `<tr>
+        <td><span style="display:inline-flex; gap:6px; align-items:center"><svg class="icon" style="color:var(--ink-faint)"><use href="#i-file"/></svg> ${escapeHtml(f.name)}</span></td>
+        <td class="num">${nm(Math.round(f.size_kb))} KB</td>
+        <td class="num">${fmtDate(new Date(f.uploaded_at).toISOString().slice(0,10))}</td>
+      </tr>`).join('')
+    : `<tr><td colspan="3" class="muted center">${t('drawer.empty')}</td></tr>`;
+}
+
+/* ====== Main refresh ================================================= */
+async function refreshAll() {
+  const empty = !state.meta || state.filters.categories.length === 0 || state.filters.severities.length === 0;
+  if (empty) { showFilteredEmpty(); return; }
+  const [k, weekly, cats, sev, ins, fc] = await Promise.all([
+    api('/api/kpis'), api('/api/weekly'), api('/api/categories'),
+    api('/api/severity'), api('/api/insights'), api('/api/forecast?horizon=2'),
+  ]);
+  Object.assign(state.cache, { kpis:k, weekly, cats, sev, fc });
+  renderKpis(k);
+  renderWeekly(weekly);
+  renderCategories(cats);
+  renderSeverity(sev);
+  renderInsights(ins);
+  renderForecast(fc);
+
+  const [topics, weeklyByCat, alerts, sevWeekly, momentum, matrix, recur] = await Promise.all([
+    api('/api/topics?top_n=10'), api('/api/weekly_by_cat'), api('/api/alerts'),
+    api('/api/severity_weekly'), api('/api/topic_momentum'), api('/api/category_matrix'),
+    api('/api/recurring_cases?min_repeats=3&lookback_days=120'),
+  ]);
+  Object.assign(state.cache, { topics, weeklyByCat, alerts, sevW:sevWeekly, momentum, matrix, recur });
+  renderTopics(topics);
+  renderWeeklyByCat(weeklyByCat);
+  renderAlerts(alerts);
+  renderSeverityWeekly(sevWeekly);
+  renderMomentum(momentum);
+  renderMatrix(matrix);
+  renderRecurring(recur);
+  await loadActions();
+  bindPlotlyClicks();
+  updateFilterStateLine();
+}
+function showFilteredEmpty() {
+  ['#kpi-grid','#insights-list','#chart-weekly','#chart-categories','#chart-severity',
+   '#chart-topics','#chart-weekly-cat','#chart-severity-weekly','#momentum-list',
+   '#chart-matrix','#alerts-list','#actions-tbody','#chart-forecast','#recurring-list'].forEach(s => {
+    const el = qs(s); if (el) el.innerHTML = `<div class="empty"><div class="empty__title">${t('drawer.empty')}</div></div>`;
+  });
+}
+
+/* ====== Renderers ==================================================== */
+function renderKpis(k) {
+  const d = k.weekly_delta_pct;
+  const dCls = d == null ? '' : (d>0 ? 'kpi__delta--up' : 'kpi__delta--down');
+  const dTxt = d == null ? t('kpi.delta.na') :
+    t(d>0 ? 'kpi.delta.up' : 'kpi.delta.down', { pct: fmtPct(Math.abs(d)) });
+  qs('#kpi-grid').innerHTML = `
+    <div class="kpi drillable" data-drill="total"><div class="kpi__label">${t('kpi.total')}</div>
+      <div class="kpi__value">${fmtInt(k.total)}</div><div class="kpi__delta ${dCls}">${dTxt}</div></div>
+    <div class="kpi drillable" data-drill="complaints"><div class="kpi__label">${t('kpi.complaints')}</div>
+      <div class="kpi__value">${fmtPct(k.pct_complaints)}</div></div>
+    <div class="kpi drillable" data-drill="high"><div class="kpi__label">${t('kpi.high')}</div>
+      <div class="kpi__value">${fmtPct(k.pct_high_severity)}</div></div>
+    <div class="kpi"><div class="kpi__label">${t('kpi.cats')}</div>
+      <div class="kpi__value">${fmtInt(k.active_categories)}</div></div>`;
+}
+function renderInsights(d) {
+  const list = d.insights || [];
+  if (!list.length) { qs('#insights-list').innerHTML = `<div class="empty"><p>${t('drawer.empty')}</p></div>`; return; }
+  qs('#insights-list').innerHTML = list.map((it, i) => `
+    <div class="insight">
+      <div class="insight__num">${fmtInt(i+1)}</div>
+      <div class="insight__body">
+        <div class="insight__title">${escapeHtml(it.title)}</div>
+        <div class="insight__row"><span class="insight__tag">${t('insight.tag.evidence')}</span> ${escapeHtml(it.evidence||'')}</div>
+        <div class="insight__row"><span class="insight__tag insight__tag--act">${t('insight.tag.action')}</span> ${escapeHtml(it.action||'')}</div>
+        ${it.metric?`<div class="insight__row"><span class="insight__tag insight__tag--met">${t('insight.tag.metric')}</span> ${escapeHtml(it.metric)}</div>`:''}
+      </div>
+    </div>`).join('');
+}
+
+/* axis helpers */
+function niceTicks(arr, count) {
+  if (!arr.length) return [0];
+  const max = Math.max(...arr);
+  if (max === 0) return [0];
+  const raw = max / count;
+  const exp = Math.pow(10, Math.floor(Math.log10(raw)));
+  const step = [1,2,5,10].map(m=>m*exp).find(c=>c>=raw) || exp*10;
+  const out = []; for (let v=0; v<=max+step*0.001; v+=step) out.push(Math.round(v));
+  return out;
+}
+function arabicDateAxis(xs) {
+  if (!xs.length) return {};
+  const n = xs.length, step = Math.max(1, Math.floor(n/6));
+  const tickvals = []; for (let i=0;i<n;i+=step) tickvals.push(xs[i]);
+  if (tickvals[tickvals.length-1] !== xs[n-1]) tickvals.push(xs[n-1]);
+  return { tickmode:'array', tickvals, ticktext: tickvals.map(t => fmtDate(String(t).slice(0,10))) };
+}
+
+function renderWeekly(d) {
+  Plotly.newPlot('chart-weekly', [{
+    x: d.x, y: d.y, type:'scatter', mode:'lines',
+    line:{ color: DGA.primary, width:2.5, shape:'spline' },
+    fill:'tozeroy', fillcolor:'rgba(38,99,75,0.10)',
+    customdata: d.y.map(v => fmtInt(v)),
+    hovertemplate: '<b>%{x}</b><br>%{customdata}<extra></extra>',
+  }], {
+    ...plotlyBase(),
+    xaxis: { ...plotlyBase().xaxis, ...arabicDateAxis(d.x) },
+    yaxis: { ...plotlyBase().yaxis,
+      tickvals: niceTicks(d.y, 5), ticktext: niceTicks(d.y, 5).map(v => fmtInt(v)) },
+  }, PLOTLY_CONFIG);
+  // caption
+  if (d.x.length) {
+    const peakI = d.y.indexOf(Math.max(...d.y));
+    const avg = Math.round(d.y.reduce((a,b)=>a+b,0)/d.y.length);
+    qs('#cap-weekly').textContent = t('caption.weekly', {
+      peak: fmtDate(d.x[peakI]), peakv: fmtInt(d.y[peakI]), avg: fmtInt(avg),
+    });
+  }
+}
+function renderCategories(items) {
+  const colors = items.map((_,i)=>CATEGORY_PALETTE[i%CATEGORY_PALETTE.length]);
+  const total = items.reduce((s,i)=>s+i.count,0)||1;
+  Plotly.newPlot('chart-categories', [{
+    type:'pie', labels: items.map(i=>i.label), values: items.map(i=>i.count),
+    hole:0.55, marker:{ colors, line:{ color:'#fff', width:2 } },
+    text: items.map(i => fmtPct(i.count/total*100)), textinfo:'text',
+    textposition:'inside', insidetextorientation:'horizontal',
+    customdata: items.map(i => fmtInt(i.count)),
+    hovertemplate: '<b>%{label}</b><br>%{customdata}<extra></extra>',
+  }], { ...plotlyBase(), margin:{ t:8, r:10, b:30, l:10 } }, PLOTLY_CONFIG);
+  if (items.length) {
+    const top = items[0], low = items[items.length-1];
+    qs('#cap-categories').textContent = t('caption.cats', {
+      top: top.label, topPct: fmtPct(top.count/total*100),
+      low: low.label, lowPct: fmtPct(low.count/total*100),
+    });
+  }
+}
+function renderSeverity(items) {
+  Plotly.newPlot('chart-severity', [{
+    type:'bar', orientation:'h',
+    x: items.map(i => i.count),
+    y: items.map(i => SEV_LABEL(i.label)),
+    marker:{ color: items.map(i => SEVERITY_COLORS[i.label] || DGA.inkMuted) },
+    text: items.map(i => fmtInt(i.count)), textposition:'outside',
+    customdata: items.map(i => [fmtInt(i.count), i.label]),
+    hovertemplate: '<b>%{y}</b>: %{customdata[0]}<extra></extra>',
+  }], {
+    ...plotlyBase(), margin:{ t:8, r:60, b:30, l:80 },
+    xaxis: { ...plotlyBase().xaxis,
+      tickvals: niceTicks(items.map(i=>i.count), 5),
+      ticktext: niceTicks(items.map(i=>i.count), 5).map(v=>fmtInt(v)) },
+  }, PLOTLY_CONFIG);
+  const total = items.reduce((s,i)=>s+i.count,0)||1;
+  const high = items.find(i => i.label==='عالية');
+  qs('#cap-severity').textContent = t('caption.sev', {
+    high: high ? fmtPct(high.count/total*100) : t('na'),
+  });
+}
+function renderForecast(d) {
+  if (!d.history.x.length) {
+    qs('#chart-forecast').innerHTML = `<div class="empty">${t('drawer.empty')}</div>`;
+    qs('#forecast-by-cat').innerHTML = ''; qs('#cap-forecast').textContent = ''; return;
+  }
+  const histX=d.history.x, histY=d.history.y, hasFc=d.forecast.x.length>0;
+  const allX = histX.concat(d.forecast.x);
+  const traces = [{
+    name: LANG==='ar'?'فعلي':'Actual',
+    x: histX, y: histY, type:'scatter', mode:'lines',
+    line:{ color: DGA.primary, width:2.5, shape:'spline' },
+    fill:'tozeroy', fillcolor:'rgba(38,99,75,0.10)',
+    customdata: histY.map(v=>fmtInt(v)),
+    hovertemplate:'<b>%{x}</b><br>%{customdata}<extra></extra>',
+  }];
+  if (hasFc) {
+    const fcX=[histX[histX.length-1], ...d.forecast.x];
+    const fcY=[histY[histY.length-1], ...d.forecast.y];
+    const lo=[histY[histY.length-1], ...d.forecast.lo];
+    const hi=[histY[histY.length-1], ...d.forecast.hi];
+    traces.push({ x:fcX, y:hi, type:'scatter', mode:'lines', line:{ color:'rgba(38,99,75,0.20)', width:0 }, hoverinfo:'skip', showlegend:false });
+    traces.push({ x:fcX, y:lo, type:'scatter', mode:'lines', line:{ color:'rgba(38,99,75,0.20)', width:0 }, fill:'tonexty', fillcolor:'rgba(38,99,75,0.10)', hoverinfo:'skip', name: LANG==='ar'?'نطاق الثقة':'Confidence band' });
+    traces.push({ name: LANG==='ar'?'متوقّع':'Forecast', x:fcX, y:fcY, type:'scatter', mode:'lines+markers', line:{ color:DGA.primary, width:2, dash:'dot' }, marker:{ size:6, color:DGA.primary }, customdata: fcY.map(v=>fmtInt(v)), hovertemplate:'<b>%{x}</b><br>%{customdata}<extra></extra>' });
+  }
+  const allY = histY.concat(d.forecast.hi||[]);
+  Plotly.newPlot('chart-forecast', traces, {
+    ...plotlyBase(), margin:{ t:8, r:10, b:50, l:40 },
+    xaxis:{ ...plotlyBase().xaxis, ...arabicDateAxis(allX) },
+    yaxis:{ ...plotlyBase().yaxis, tickvals: niceTicks(allY,5), ticktext: niceTicks(allY,5).map(v=>fmtInt(v)) },
+  }, PLOTLY_CONFIG);
+  if (hasFc) {
+    qs('#cap-forecast').textContent = t('caption.fc', {
+      next: fmtInt(Math.round(d.forecast.y[0])),
+      last: fmtInt(histY[histY.length-1]),
+      lo: fmtInt(Math.round(d.forecast.lo[0])),
+      hi: fmtInt(Math.round(d.forecast.hi[0])),
+    });
+  }
+  qs('#forecast-by-cat').innerHTML = (d.by_category||[]).map(c => {
+    const cls = c.delta>0?'is-up':c.delta<0?'is-down':'';
+    const arr = c.delta>0?'↑':c.delta<0?'↓':'·';
+    return `<div class="fc">
+      <div class="fc__cat">${escapeHtml(c.name)}</div>
+      <div class="fc__val">${fmtInt(Math.round(c.next_week))}</div>
+      <div class="fc__delta ${cls}">${arr} ${fmtInt(c.last_week)}</div>
+    </div>`;
+  }).join('');
+}
+function renderTopics(rows) {
+  if (!rows.length) { qs('#chart-topics').innerHTML = `<div class="empty">${t('drawer.empty')}</div>`; return; }
+  const sorted = rows.slice().sort((a,b)=>a.count-b.count);
+  Plotly.newPlot('chart-topics', [{
+    type:'bar', orientation:'h',
+    x: sorted.map(r=>r.count), y: sorted.map(r=>r.topic_label),
+    text: sorted.map(r => `${fmtInt(r.count)}  ·  ${fmtPct(r.high_pct)}`),
+    textposition:'outside', cliponaxis:false,
+    textfont:{ color:DGA.ink, size:12 },
+    marker:{ color: sorted.map(r=>r.high_pct), colorscale:[[0,DGA.primaryTint],[1,DGA.danger]],
+             colorbar:{ titlefont:{ size:11 }, thickness:12, tickfont:{ size:10 } } },
+    customdata: sorted.map(r => [fmtInt(r.count), fmtPct(r.high_pct)]),
+    hovertemplate:'<b>%{y}</b><br>%{customdata[0]} · %{customdata[1]}<extra></extra>',
+  }], {
+    ...plotlyBase(), margin:{ t:8, r:140, b:40, l:200 },
+    xaxis:{ ...plotlyBase().xaxis, tickvals: niceTicks(sorted.map(r=>r.count),5),
+            ticktext: niceTicks(sorted.map(r=>r.count),5).map(v=>fmtInt(v)) },
+  }, PLOTLY_CONFIG);
+  const top = rows[0];
+  qs('#cap-topics').textContent = t('caption.topics', {
+    name: top.topic_label, count: fmtInt(top.count), high: fmtPct(top.high_pct),
+  });
+}
+function renderWeeklyByCat(d) {
+  if (!d.x.length) { qs('#chart-weekly-cat').innerHTML = `<div class="empty">${t('drawer.empty')}</div>`; return; }
+  const traces = d.series.map((s,i) => ({
+    x:d.x, y:s.y, name:s.name, type:'scatter', mode:'lines',
+    line:{ color: CATEGORY_PALETTE[i%CATEGORY_PALETTE.length], width:2 },
+    customdata: s.y.map(v=>fmtInt(v)),
+    hovertemplate:'<b>%{x}</b> · '+s.name+'<br>%{customdata}<extra></extra>',
+  }));
+  const allY = d.series.flatMap(s=>s.y);
+  Plotly.newPlot('chart-weekly-cat', traces, {
+    ...plotlyBase(), margin:{ t:8, r:10, b:60, l:40 },
+    xaxis:{ ...plotlyBase().xaxis, ...arabicDateAxis(d.x) },
+    yaxis:{ ...plotlyBase().yaxis, tickvals: niceTicks(allY,5), ticktext: niceTicks(allY,5).map(v=>fmtInt(v)) },
+  }, PLOTLY_CONFIG);
+  qs('#cap-weekly-cat').textContent = t('caption.weeklyCat');
+}
+function renderSeverityWeekly(d) {
+  if (!d.x.length) { qs('#chart-severity-weekly').innerHTML = `<div class="empty">${t('drawer.empty')}</div>`; return; }
+  const traces = d.series.map(s => ({
+    x:d.x, y:s.y, name: SEV_LABEL(s.name), type:'scatter', mode:'lines', stackgroup:'sev',
+    line:{ color: SEVERITY_COLORS[s.name], width:0.5 },
+    fillcolor: SEVERITY_COLORS[s.name]+'88',
+    customdata: s.y.map(v=>fmtInt(v)),
+    hovertemplate:'<b>%{x}</b> · '+SEV_LABEL(s.name)+'<br>%{customdata}<extra></extra>',
+  }));
+  const allY = d.series.length ? d.series[0].y.map((_,i)=>d.series.reduce((s,ss)=>s+ss.y[i],0)) : [];
+  Plotly.newPlot('chart-severity-weekly', traces, {
+    ...plotlyBase(), margin:{ t:8, r:10, b:50, l:40 },
+    xaxis:{ ...plotlyBase().xaxis, ...arabicDateAxis(d.x) },
+    yaxis:{ ...plotlyBase().yaxis, tickvals: niceTicks(allY,5), ticktext: niceTicks(allY,5).map(v=>fmtInt(v)) },
+  }, PLOTLY_CONFIG);
+  // caption: high severity share + trend direction
+  const highSeries = d.series.find(s => s.name === 'عالية');
+  const totalSeries = allY;
+  if (highSeries && totalSeries.length) {
+    const totalHigh = highSeries.y.reduce((a,b)=>a+b,0);
+    const totalAll  = totalSeries.reduce((a,b)=>a+b,0);
+    const pct = totalAll ? (totalHigh / totalAll * 100) : 0;
+    const last3 = highSeries.y.slice(-3); const first3 = highSeries.y.slice(0,3);
+    const a = first3.reduce((a,b)=>a+b,0)/Math.max(1,first3.length);
+    const b = last3.reduce((a,b)=>a+b,0)/Math.max(1,last3.length);
+    const trendK = b > a*1.1 ? 'trend.up' : b < a*0.9 ? 'trend.down' : 'trend.flat';
+    qs('#cap-severity-weekly').textContent = t('caption.sevW', { pct: fmtPct(pct), trend: t(trendK) });
+  }
+}
+function renderMomentum(rows) {
+  const root = qs('#momentum-list');
+  if (!rows.length) { root.innerHTML = `<div class="empty"><p>${t('drawer.empty')}</p></div>`; return; }
+  root.innerHTML = rows.map(r => {
+    const up = r.growth_pct >= 0;
+    return `<div class="momentum drillable" data-topic="${escapeHtml(r.topic_label)}">
+      <div class="momentum__name">${escapeHtml(r.topic_label)}</div>
+      <div class="momentum__nums num">${fmtInt(r.recent)} <span class="momentum__sep">←</span> ${fmtInt(r.prior)}</div>
+      <div class="momentum__delta ${up?'is-up':'is-down'}">${up?'↑':'↓'} ${fmtPct(Math.abs(r.growth_pct))}</div>
+    </div>`;
+  }).join('');
+  qsa('.momentum', root).forEach(el => el.addEventListener('click', () =>
+    openDrill({ title: el.dataset.topic, topic: el.dataset.topic })));
+}
+function renderMatrix(d) {
+  if (!d.categories.length) { qs('#chart-matrix').innerHTML = `<div class="empty">${t('drawer.empty')}</div>`; return; }
+  Plotly.newPlot('chart-matrix', [{
+    z: d.values, x: d.severities.map(SEV_LABEL), y: d.categories,
+    type:'heatmap', colorscale:[[0,'#FFFFFF'],[1,DGA.primary]], showscale:true,
+    text: d.values.map(row => row.map(v => v ? fmtInt(v) : '')),
+    texttemplate:'%{text}', textfont:{ color: DGA.ink, size: 12 },
+    customdata: d.values.map(row => row.map(v => fmtInt(v))),
+    hovertemplate:'<b>%{y}</b> · %{x}<br>%{customdata}<extra></extra>',
+  }], { ...plotlyBase(), margin:{ t:8, r:10, b:40, l:140 } }, PLOTLY_CONFIG);
+  // find peak cell
+  let peak = { v: 0, cat: '', sev: '' };
+  d.values.forEach((row,i) => row.forEach((v,j) => {
+    if (v > peak.v) peak = { v, cat: d.categories[i], sev: d.severities[j] };
+  }));
+  qs('#cap-matrix').textContent = t('caption.matrix', { pair: `${peak.cat} × ${SEV_LABEL(peak.sev)}` });
+}
+function renderRecurring(rows) {
+  const root = qs('#recurring-list');
+  if (!rows.length) { root.innerHTML = `<div class="empty"><p>${t('drawer.empty')}</p></div>`; return; }
+  root.innerHTML = rows.map(r => `
+    <div class="recur drillable" data-phrase="${escapeHtml(r.phrase)}">
+      <div class="recur__phrase">${escapeHtml(r.phrase)}</div>
+      <div class="recur__meta">${escapeHtml(r.top_category)} · ${fmtDate(r.first_seen)} ← ${fmtDate(r.last_seen)}</div>
+      <div class="recur__meta">${fmtPct(r.high_pct)}</div>
+      <div class="recur__count">${fmtInt(r.count)} ×</div>
+    </div>`).join('');
+  qsa('.recur', root).forEach(el => el.addEventListener('click', () =>
+    openDrill({ title: `«${el.dataset.phrase}»`, body_contains: el.dataset.phrase })));
+}
+function renderAlerts(list) {
+  const root = qs('#alerts-list');
+  if (!list.length) { root.innerHTML = `<div class="empty"><p>${t('drawer.empty')}</p></div>`; return; }
+  root.innerHTML = list.slice(0,12).map(a => `
+    <div class="alert ${a.severity==='عالية'?'alert--high':''} drillable" data-cat="${a.dimension==='category'?escapeHtml(a.value):''}" data-topic="${a.dimension==='topic_label'?escapeHtml(a.value):''}" data-week="${a.week_start}">
+      <div class="alert__title">
+        <span class="pill ${a.severity==='عالية'?'pill--high':'pill--med'}">${SEV_LABEL(a.severity)}</span>
+        <span>${escapeHtml(a.value)} — +${fmtInt(a.count)}</span>
+      </div>
+      <div class="alert__meta">${fmtDate(a.week_start)} · ${LANG==='ar'?'متوسط تاريخي':'historic mean'} ${fmtInt(Math.round(a.baseline_mean))}</div>
+      <div class="alert__body">${escapeHtml(a.suggested_action)}</div>
+    </div>`).join('');
+  qsa('.alert', root).forEach(el => el.addEventListener('click', () => {
+    const opts = { title: el.querySelector('.alert__title span:last-child').textContent };
+    if (el.dataset.cat) opts.category = el.dataset.cat;
+    if (el.dataset.topic) opts.topic = el.dataset.topic;
+    if (el.dataset.week) opts.week_start = el.dataset.week;
+    openDrill(opts);
+  }));
+}
+async function loadActions() {
+  const onlyHigh = qs('#actions-only-high input').checked;
+  const q = buildQuery();
+  const r = await fetch(`/api/records?${q}&only_high=${onlyHigh}&page=1&page_size=50`);
+  const data = await r.json();
+  qs('#actions-meta').textContent = `${fmtInt(data.total)} · ${fmtInt(data.rows.length)}`;
+  qs('#actions-tbody').innerHTML = data.rows.length ? data.rows.map(r => {
+    const sevClass = r.severity==='عالية'?'pill--high':r.severity==='متوسطة'?'pill--med':'pill--low';
+    return `<tr class="drillable" data-id="${r.request_id}">
+      <td class="num">#${nm(r.request_id)}</td>
+      <td>${escapeHtml(r.body || t('na'))}</td>
+      <td>${escapeHtml(r.category)}</td>
+      <td>${escapeHtml(r.topic_label||t('na'))}</td>
+      <td><span class="pill ${sevClass}">${SEV_LABEL(r.severity)}</span></td>
+      <td class="muted">${LANG==='ar'?toAr(escapeHtml(r.severity_reason||t('na'))):escapeHtml(r.severity_reason||t('na'))}</td>
+      <td>${LANG==='ar'?toAr(escapeHtml(r.recommended_action)):escapeHtml(r.recommended_action)}</td>
+      <td class="num">${fmtDate(r.closed_at)}</td>
+    </tr>`;
+  }).join('') : `<tr><td colspan="8" class="muted center">${t('drawer.empty')}</td></tr>`;
+}
+
+bootstrap().catch(err => {
+  console.error(err);
+  qs('.main').innerHTML = `<div class="empty"><div class="empty__title">${t('drawer.empty')}</div><p>${err.message}</p></div>`;
+});
+</script>
+</body>
+</html>

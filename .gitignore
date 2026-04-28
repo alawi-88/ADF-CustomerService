@@ -1,0 +1,23 @@
+# Python
+__pycache__/
+*.pyc
+.venv/
+.env
+.ipynb_checkpoints/
+
+# Data — never commit customer data
+data/raw/*.xlsx
+data/raw/*.xls
+data/processed/*.parquet
+!data/raw/.gitkeep
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editors
+.idea/
+.vscode/
+
+# scratch
+_screenshot.png
