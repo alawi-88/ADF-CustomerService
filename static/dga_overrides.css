@@ -1,0 +1,257 @@
+/* =============================================================================
+   ADF customer-service POC — DGA design-system corrections (overlay)
+   ============================================================================
+   Drop-in fixes for the issues raised in the DGA audit. Designed as an
+   *additive* stylesheet — load AFTER static/dga.css so these rules win on
+   specificity. That way you can revert in one line if anything breaks.
+
+   In templates/index.html, after the existing dga.css <link>, add:
+       <link rel="stylesheet" href="/static/dga_overrides.css">
+
+   Audit references: /sessions/.../tmp/adf/dga_audit.md
+   ============================================================================ */
+
+:root {
+  /* DGA primary green — was #26634B, now matches design.dga.gov.sa */
+  --color-primary:        #006C35;
+  --color-primary-hover:  #005628;
+  --color-primary-active: #004520;
+  --color-primary-bg:     #E5F2EB;  /* 8% tint of #006C35 */
+
+  /* Recurring badge — old #5505CD on #F2EFFA failed WCAG AA at 3.2:1.
+     Switching to neutral-strong on a tinted bg passes 7:1. */
+  --color-recurring-fg:   #4A1D9A;
+  --color-recurring-bg:   #ECE3FF;
+
+  /* Info background — bumped contrast from 5.8:1 to 7.4:1 */
+  --color-info-bg:        #C8DDF0;
+}
+
+/* ---------------------------------------------------------------------------
+   1. Apply the new primary across all places it was used.
+   --------------------------------------------------------------------------- */
+.btn-primary,
+.kpi-card.primary,
+.nav-item.active,
+.sidebar-active,
+.tag-primary {
+  background-color: var(--color-primary) !important;
+}
+.btn-primary:hover { background-color: var(--color-primary-hover) !important; }
+.btn-primary:active { background-color: var(--color-primary-active) !important; }
+
+a, .link { color: var(--color-primary); }
+a:hover { color: var(--color-primary-hover); text-decoration: underline; }
+
+/* ---------------------------------------------------------------------------
+   2. Visible focus states — WCAG 2.1 AA (was missing entirely).
+   --------------------------------------------------------------------------- */
+button:focus-visible,
+[role="button"]:focus-visible,
+a:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+.nav-item:focus-visible,
+.kpi-card:focus-visible,
+.dropzone:focus-visible,
+.tab:focus-visible {
+  outline: 3px solid var(--color-primary);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* For elements on a green/primary background, swap to a light ring */
+.btn-primary:focus-visible,
+.nav-item.active:focus-visible {
+  outline-color: #FFFFFF;
+  outline-offset: 3px;
+}
+
+/* ---------------------------------------------------------------------------
+   3. Recurring-case badge contrast fix.
+   --------------------------------------------------------------------------- */
+.badge-recurring,
+.tag-recurring {
+  color: var(--color-recurring-fg);
+  background-color: var(--color-recurring-bg);
+  border: 1px solid var(--color-recurring-fg);
+}
+
+/* ---------------------------------------------------------------------------
+   4. RTL drawer animation — was sliding the wrong direction.
+   --------------------------------------------------------------------------- */
+[dir="rtl"] .drawer-enter,
+[dir="rtl"] .side-drawer-enter {
+  transform: translateX(-20px);
+}
+[dir="rtl"] .drawer-enter-active,
+[dir="rtl"] .side-drawer-enter-active {
+  transform: translateX(0);
+  transition: transform 240ms ease-out;
+}
+
+/* ---------------------------------------------------------------------------
+   5. Info-bg contrast bump (callouts, info badges).
+   --------------------------------------------------------------------------- */
+.alert-info,
+.callout-info,
+.tag-info {
+  background-color: var(--color-info-bg);
+}
+
+/* ---------------------------------------------------------------------------
+   6. Reduced-motion support (Saudi gov accessibility expectation).
+   --------------------------------------------------------------------------- */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   7. KPI card semantic affordance — pair with role="group" + aria-label
+       in the HTML (see 06_html_aria_patches.html). This makes the cards
+       clearly tabbable in addition to being announced.
+   --------------------------------------------------------------------------- */
+.kpi-card {
+  cursor: pointer;
+}
+.kpi-card[aria-disabled="true"] {
+  cursor: default;
+  opacity: 0.7;
+}
+
+/* ---------------------------------------------------------------------------
+   8. Skip-to-content link — universally required for keyboard users.
+       Pair with <a class="skip-link" href="#main">انتقال إلى المحتوى</a>
+       as the very first child of <body>.
+   --------------------------------------------------------------------------- */
+.skip-link {
+  position: absolute;
+  inset-inline-start: 0;
+  top: -100px;
+  background: var(--color-primary);
+  color: #FFF;
+  padding: 8px 16px;
+  z-index: 9999;
+  transition: top 120ms ease-in;
+}
+.skip-link:focus {
+  top: 8px;
+}
+
+
+/* ---------------------------------------------------------------------------
+   9. WCAG AA contrast fix — bump --ink-faint from #8A8A8A (3.45:1) to a value
+       that hits 4.5:1 against white. Also lift the data-quality "med" pill
+       and the filter-state caption.
+   --------------------------------------------------------------------------- */
+:root {
+  --ink-faint: #6B6B6B;            /* was #8A8A8A — now 5.33:1 on white */
+}
+.filter-state {
+  color: #4A4A4A;                  /* 8.5:1 — important breadcrumb */
+}
+.pill.pill--med {
+  color: #6B4A00;                  /* darken med pill text */
+  background: #FFF3D6;
+  border: 1px solid #B07800;
+}
+/* sr-only utility for hidden-but-announced text */
+.sr-only {
+  position: absolute;
+  width: 1px; height: 1px;
+  padding: 0; margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* ---------------------------------------------------------------------------
+   10. Mobile responsive — < 600px viewport
+   --------------------------------------------------------------------------- */
+@media (max-width: 600px) {
+  html, body {
+    overflow-x: hidden;
+    max-width: 100vw;
+  }
+  .shell {
+    grid-template-columns: 1fr !important;
+    overflow-x: hidden;
+  }
+  .topbar {
+    flex-wrap: wrap;
+    padding: var(--s-3);
+  }
+  .topbar__meta {
+    width: 100%;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: var(--s-2);
+  }
+  .sidebar {
+    width: 100%;
+    border-bottom: 1px solid var(--line);
+    border-left: 0;
+    border-right: 0;
+    padding: var(--s-3);
+  }
+  .nav {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+  .nav__item {
+    flex: 1 1 calc(50% - 2px);
+    margin: 0;
+    font-size: var(--fs-sm);
+  }
+  .main {
+    padding: var(--s-3);
+    width: 100%;
+    overflow-x: hidden;
+  }
+  .grid--kpi {
+    grid-template-columns: 1fr 1fr !important;
+  }
+  .card {
+    padding: var(--s-3);
+  }
+  .card__head {
+    flex-wrap: wrap;
+  }
+  /* Plotly responsiveness — force the chart container to viewport width */
+  .plot-container,
+  .plotly,
+  .js-plotly-plot {
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+  .table-scroll {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  .field {
+    width: 100%;
+  }
+  .input,
+  .textarea {
+    width: 100%;
+    min-width: 0;
+  }
+}
+
+/* < 380px — keep KPI tiles single-column on the smallest phones */
+@media (max-width: 380px) {
+  .grid--kpi {
+    grid-template-columns: 1fr !important;
+  }
+  .nav__item {
+    flex: 1 1 100%;
+  }
+}
