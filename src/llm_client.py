@@ -22,6 +22,22 @@ from typing import Any
 
 import requests
 
+PROMPT_VERSION = "v2"  # bump on prompt change so snapshots are auditable
+
+
+def _is_low_content(body: str) -> bool:
+    """Pre-LLM filter — saves Groq tokens and removes hallucination risk."""
+    if not body:
+        return True
+    s = body.strip()
+    if len(s) < 4:
+        return True
+    if s.lower() in {"hi", "hello", "test", "تست", "?", "؟", "،"}:
+        return True
+    if s in {"عام", "استفسار", "غير محدد"}:
+        return True
+    return False
+
 logger = logging.getLogger(__name__)
 
 OLLAMA_BASE_URL = os.environ.get("OLLAMA_BASE_URL", "http://localhost:11434")
@@ -205,7 +221,7 @@ def _try_parse_json(text: str) -> dict | None:
 
 @dataclass
 class Enrichment:
-    severity: str           # "عالية" | "متوسطة" | "منخفضة"
+    severity: str
     severity_reason_ar: str
     severity_reason_en: str
     topic_label_ar: str
@@ -213,6 +229,7 @@ class Enrichment:
     recommended_action_ar: str
     recommended_action_en: str
     source: str             # "llm" | "rule"
+    subcategory: str = "unspecified"
 
     # Compat shims so older callers that read .topic_label / .severity_reason /
     # .recommended_action still get the Arabic version (the system's primary).
@@ -526,21 +543,33 @@ _DOMAIN_CONTEXT = """السياق: مؤسسة تمويلية تُقدّم قرو
 أبرز إشارات الخطورة في طلبات المستفيدين: التعثّر في السداد، الاحتيال أو التلاعب، الخصم المالي الخاطئ، تأخر صرف المستحقات، رفض طلبات التمويل، طلبات الاسترداد العاجل."""
 
 _ENRICH_SYSTEM = (
-    "أنت محلل خدمة عملاء أول في مؤسسة تمويلية. تفهم منتجات المؤسسة "
-    "وعملياتها. تستجيب فقط بصيغة JSON صالحة بالعربية، بدون أي شرح إضافي.\n\n"
-    + _DOMAIN_CONTEXT
+    "أنت محلل خدمة عملاء أول في صندوق التنمية الزراعية (ADF) — جهة تمويلية حكومية في المملكة العربية السعودية. "
+    "تتلقى طلبات شكاوى واستفسارات واقتراحات من المزارعين والمستفيدين. "
+    "خدماتك تشمل: القروض العادية، القروض المتخصصة، برامج الدعم الزراعي، التمويل، السداد، التحصيل، إخلاء الطرف، الإعفاءات، خدمات المراجعين، القنوات الرقمية.\n\n"
+    "قواعد إلزامية:\n"
+    "1) أرجع JSON صالحاً فقط، بدون أي شرح خارج الـ JSON.\n"
+    "2) إن كان نص الطلب فارغاً أو لا يحمل معنى دلالياً (مثل: hi, test, عام, ?, أقل من 4 أحرف ذات معنى) — صنّف كـ severity=منخفضة و topic=سياق غير كافٍ و subcategory=insufficient_context و recommended_action=طلب توضيح من المستفيد. لا تخمّن.\n"
+    "3) كل تبرير (severity_reason) يجب أن يقتبس بعض كلمات الطلب الفعلية، أو يقول صراحةً النص لا يكفي للتقدير. ممنوع التبريرات العامة.\n"
+    "4) استخدم أسماء الإدارات الفعلية في ADF عند ذكر الجهة المختصة: التحصيل، الائتمان، خدمة المراجعين، الدعم الفني، إدارة المخاطر."
 )
 
-_ENRICH_PROMPT_TMPL = """صنّف هذا الطلب الوارد من المستفيد وأرجع JSON بالحقول التالية فقط:
-- "severity": "عالية" أو "متوسطة" أو "منخفضة" — استخدم سياق المؤسسة التمويلية عند التقدير
-- "severity_reason": تبرير محدّد يقتبس عبارة من نص الطلب ويوضّح الأثر التشغيلي/المالي على المستفيد. تجنّب التبريرات العامة.
-- "topic_label": تسمية مختصرة (٢-٤ كلمات) للموضوع (مثل: «تعثّر في السداد»، «خصم خاطئ»، «استفسار عام»، «تحديث البيانات»)
-- "recommended_action": إجراء واحد عملي قابل للتنفيذ، يذكر الجهة المختصة و SLA إن أمكن
+_ENRICH_PROMPT_TMPL = """صنّف هذا الطلب وأرجع JSON بهذه الحقول حصراً:
+
+- "severity": "عالية" | "متوسطة" | "منخفضة"
+- "severity_reason": سبب يقتبس كلمات من نص الطلب، أو يقول 'النص لا يكفي للتقدير' إن كان النص أقل من 4 أحرف ذات معنى
+- "topic_label": ٢-٤ كلمات تصف الموضوع (مثل «تعثّر في السداد»، «استفسار عن قرض زراعي»، «خصم خاطئ»، «إخلاء طرف»، «إعفاء»، «سياق غير كافٍ»)
+- "subcategory": واحدة من القائمة التالية حصراً، حسب الفئة المعلنة:
+    إذا كانت الفئة 'استفسار' → ['inquiry_loan_product', 'inquiry_eligibility', 'inquiry_application_status', 'inquiry_repayment', 'inquiry_branch_logistics', 'inquiry_other', 'insufficient_context']
+    إذا كانت الفئة 'شكوى' → ['complaint_payment', 'complaint_collection', 'complaint_service_delay', 'complaint_staff', 'complaint_other', 'insufficient_context']
+    إذا كانت الفئة 'دعم فني' → ['tech_login', 'tech_app_bug', 'tech_data', 'tech_other', 'insufficient_context']
+    إذا كانت الفئة 'خدمة مراجع' → ['ref_collection', 'ref_loan_status', 'ref_clearance', 'ref_documentation', 'ref_other', 'insufficient_context']
+    إذا كانت الفئة 'اقتراح' → ['suggestion_product', 'suggestion_process', 'suggestion_digital', 'suggestion_other']
+- "recommended_action": إجراء واحد قابل للتنفيذ يذكر الجهة المختصة و SLA. للحالات منخفضة الجودة استخدم 'طلب توضيح من المستفيد عبر [القناة]'.
 
 الفئة المعلنة: {category}
 نص الطلب: {body}
 
-أعد JSON فقط بدون أي نص آخر."""
+أعد JSON فقط."""
 
 
 def enrich_record(category: str, body: str, *, prefer_llm: bool = True) -> Enrichment:
@@ -548,7 +577,25 @@ def enrich_record(category: str, body: str, *, prefer_llm: bool = True) -> Enric
 
     Always returns AR + EN versions of every text field. If the LLM only
     supplies one language, the other is filled from the rule engine.
+
+    Pre-LLM fast-path: if the body has no semantic content (hi, test,
+    "عام", < 4 chars), return `insufficient_context` directly. This saves
+    LLM tokens AND removes a real hallucination risk for ~25% of the
+    real ADF corpus where the body field is effectively empty.
     """
+    if _is_low_content(body):
+        return Enrichment(
+            severity="منخفضة",
+            severity_reason_ar="النص لا يكفي للتقدير — يجب طلب توضيح من المستفيد قبل التصنيف",
+            severity_reason_en="The body does not contain enough information for classification",
+            topic_label_ar="سياق غير كافٍ",
+            topic_label_en="Insufficient context",
+            recommended_action_ar="طلب توضيح من المستفيد عبر القناة الأصلية قبل التصنيف",
+            recommended_action_en="Request clarification from the beneficiary via the original channel before classification",
+            source="rule",
+            subcategory="insufficient_context",
+        )
+
     if prefer_llm and (groq_available() or ollama_available()):
         try:
             raw, provider = _llm_generate(
@@ -565,6 +612,7 @@ def enrich_record(category: str, body: str, *, prefer_llm: bool = True) -> Enric
                 topic_ar = (str(parsed.get("topic_label") or "").strip() or rule.topic_label_ar)
                 reason_ar = (str(parsed.get("severity_reason") or "").strip() or rule.severity_reason_ar)
                 action_ar = (str(parsed.get("recommended_action") or "").strip() or rule.recommended_action_ar)
+                sub = (str(parsed.get("subcategory") or "").strip() or "unspecified")
                 return Enrichment(
                     severity=sev,
                     severity_reason_ar=reason_ar,
@@ -574,6 +622,7 @@ def enrich_record(category: str, body: str, *, prefer_llm: bool = True) -> Enric
                     recommended_action_ar=action_ar,
                     recommended_action_en=rule.recommended_action_en,
                     source=provider,
+                    subcategory=sub,
                 )
         except Exception as exc:
             logger.warning("LLM enrich failed, falling back to rules: %s", exc)
@@ -623,30 +672,29 @@ def answer_question(question: str, context_summary: str,
 # ---------- group-level intent synthesis ----------
 
 _GROUP_SYSTEM = (
-    "أنت موظف خدمة عملاء أول في مؤسسة تمويلية. تفهم منتجات المؤسسة كما هو "
-    "مذكور أدناه. عندك عدة طلبات من مستفيدين تشترك في موضوع واحد. مهمتك أن "
-    "تستنبط ما يطلبه المستفيدون فعلاً (وليس النص الحرفي) وأن تحدّد أفضل "
-    "إجراء عملي لموظف خدمة العملاء. ردّ بصيغة JSON صالحة فقط.\n\n"
-    + _DOMAIN_CONTEXT
+    "أنت محلل خبير في صندوق التنمية الزراعية. مهمتك قراءة عيّنة من طلبات المستفيدين التي تتشارك موضوعاً ما وإنتاج رؤية واحدة قابلة للتنفيذ.\n\n"
+    "قواعد:\n"
+    "1) كل رؤية يجب أن تستشهد بعبارة حرفية من إحدى الطلبات (بين علامات اقتباس).\n"
+    "2) ممنوع اختلاق إحصائيات لم ترد في العيّنة.\n"
+    "3) إن كانت العينة متباينة جداً (لا موضوع مشترك واضح) — قل ذلك صراحةً.\n"
+    "4) أرجع JSON فقط."
 )
 
-_GROUP_PROMPT_TMPL = """فيما يلي عيّنة من {n} طلب وردت إلى مركز خدمة العملاء، وكلها تشترك في موضوع واحد:
+_GROUP_PROMPT_TMPL = """فيما يلي عيّنة من {n} طلب وردت إلى مركز خدمة العملاء (ADF)، وكلها تشترك في موضوع واحد:
 
-{samples}
+{bodies}
 
-سياق إضافي:
-- الفئة الغالبة: {top_category}
-- نسبة الخطورة العالية في الموضوع: {high_pct}%
-- لغة الإجابة المطلوبة: {language_label}
+اقرأ العينة ثم أرجع JSON بهذه الحقول حصراً:
 
-اشرح بدقة ما يطلبه المستفيدون فعلاً (وليس الحرفي)، ثم أعطِ إجراءً واحداً عملياً قابلاً للتنفيذ من قِبل موظف خدمة العملاء.
+- "title": عنوان مختصر للموضوع (٣-٧ كلمات)
+- "scale": عدد الطلبات في هذه العيّنة (= {n})
+- "evidence_quote": اقتباس حرفي من إحدى الطلبات يلخّص الموضوع
+- "root_cause_hypothesis": فرضية واحدة عن السبب الجذري — اذكر صراحةً إن كانت غير مؤكّدة
+- "operational_impact": أثر تشغيلي محدّد (وقت معالجة، تكرار اتصال، تصعيد، إلخ)
+- "recommended_action": إجراء واحد، يذكر الجهة المختصة و SLA
+- "confidence": "عالية" | "متوسطة" | "منخفضة" — اعتماداً على وضوح العيّنة
 
-أعد JSON فقط بالحقول التالية:
-{{
-  "intent": "ما يطلبه المستفيد فعلاً، جملة واحدة كاملة في سياق المؤسسة التمويلية.",
-  "employee_response": "إجراء واحد ومحدّد للموظف. اذكر الجهة المختصة وSLA إن أمكن.",
-  "rationale": "سبب موجز يربط بين النصوص أعلاه وما استنبطته."
-}}"""
+أعد JSON فقط."""
 
 
 def enrich_group(samples: list[str], top_category: str, high_pct: float,
@@ -657,7 +705,7 @@ def enrich_group(samples: list[str], top_category: str, high_pct: float,
         return None
     if not samples:
         return None
-    sample_block = "\n".join(f"- {s}" for s in samples[:8])
+    sample_block = "\n".join(f"- {s}" for s in samples[:25])
     lang_label = "العربية" if language == "ar" else "English"
     try:
         raw, provider = _llm_generate(
@@ -687,29 +735,35 @@ def enrich_group(samples: list[str], top_category: str, high_pct: float,
 # ---------- corpus-level actionable insights ----------
 
 _INSIGHTS_SYSTEM = (
-    "أنت محلل بيانات أول في مؤسسة تمويلية. هدفك توليد رؤى عملية ملموسة "
-    "قابلة للتنفيذ هذا الأسبوع، تستند إلى منتجات المؤسسة وعملياتها. "
-    "كل رؤية تتضمن: ملاحظة موثّقة بالأرقام، إجراءً محدداً مع جهة مسؤولة، "
-    "ومقياس متابعة قابل للقياس. تجنّب العموميات والكلام الإنشائي. "
-    "أرجع JSON فقط بالعربية الرسمية.\n\n"
-    + _DOMAIN_CONTEXT
+    "أنت محلل أعمال في صندوق التنمية الزراعية. مخرجاتك تُعرض على إدارة المخاطر والإدارة العليا. "
+    "كل توصية يجب أن تكون مدعومة برقم محدّد من الإحصاءات المُعطاة. إن لم يدعمها رقم، احذفها. أرجع JSON فقط."
 )
 
-_INSIGHTS_PROMPT = """فيما يلي ملخّص إحصائي مُكثّف لمشاركات المستفيدين خلال الفترة:
+_INSIGHTS_PROMPT = """فيما يلي ملخّص إحصائي حقيقي لمشاركات المستفيدين خلال الفترة المحدّدة:
 
 {signals}
 
-استخرج {n} رؤى عملية بالضبط، كلٌّ منها قابلة للتنفيذ هذا الأسبوع. أعد JSON بالشكل:
+العدد الإجمالي للطلبات في العيّنة: {n}
+
+أعد JSON بالشكل:
 {{
-  "insights": [
+  "items": [
     {{
-      "title": "...",
-      "evidence": "...",
-      "action": "...",
-      "metric": "..."
+      "id": "<slug فريد للتوصية>",
+      "title": "<عنوان مختصر>",
+      "evidence": "<رقم/نسبة محدّدة من الإحصاءات أعلاه>",
+      "action": "<إجراء واحد قابل للتنفيذ مع جهة مختصة و SLA>",
+      "metric_to_watch": "<مؤشر يقاس أسبوعياً للتحقّق من أن الإجراء نجح>",
+      "owner": "<الجهة المختصة في ADF>",
+      "priority": "عاجل" | "مهم" | "للمتابعة"
     }}
   ]
-}}"""
+}}
+
+قواعد:
+- لا تختلق نسباً غير موجودة في الملخّص.
+- إن كان عدد الطلبات أقل من 50، خفّض الثقة وأشر إلى ذلك في 'evidence'.
+- لا توصية بدون 'metric_to_watch' قابل للقياس."""
 
 
 def generate_insights(signals_text: str, n: int = 4) -> dict:

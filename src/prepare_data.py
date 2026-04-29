@@ -42,13 +42,53 @@ COLUMN_MAP = {
 }
 
 
+# Tolerant column matching — accept reasonable variations of the official names
+_HEADER_ALIASES = {
+    "request_id":   ["الرقم", "id", "ticket id", "ticket_id", "request id", "request_id", "رقم الطلب", "رقم الطلب رقم", "#"],
+    "request_type": ["الطلب", "type", "request type", "request_type", "نوع الطلب", "نوع"],
+    "category":     ["العنوان", "category", "subject", "title", "الفئة", "نوع الفئة", "العنوان الفرعي"],
+    "body":         ["body", "نص", "نص الطلب", "تفاصيل", "details", "description", "موضوع", "ملاحظات", "محتوى"],
+    "closed_at":    ["تاريخ الانتهاء", "closed at", "closed_at", "date", "تاريخ", "تاريخ الإغلاق", "ended at"],
+}
+
+
+def _resolve_columns(df: pd.DataFrame, fname: str) -> dict:
+    """Map raw column names to the canonical 5 we need.
+    Falls back to positional when header isn't recognised."""
+    cols = list(df.columns)
+    norm = [str(c).strip().lower() for c in cols]
+    resolved: dict[str, str] = {}
+    for canonical, aliases in _HEADER_ALIASES.items():
+        for a in aliases:
+            a_n = a.strip().lower()
+            for orig, n in zip(cols, norm):
+                if n == a_n:
+                    resolved[canonical] = orig
+                    break
+            if canonical in resolved:
+                break
+    # If body still missing, fall back to positional col index 3 (the
+    # original export sometimes ships the body column unnamed).
+    if "body" not in resolved and len(cols) >= 4:
+        resolved["body"] = cols[3]
+    missing = [c for c in ("request_id", "request_type", "category", "body", "closed_at") if c not in resolved]
+    if missing:
+        raise ValueError(
+            f"{fname}: cannot find required column(s): {missing}. "
+            f"Found headers: {list(cols)}. "
+            f"Expected (with aliases): {list(_HEADER_ALIASES.keys())}."
+        )
+    return resolved
+
+
 def _load_one(path: Path) -> pd.DataFrame:
     log.info("loading %s", path.name)
     df = pd.read_excel(path)
     if df.shape[1] < 5:
         raise ValueError(f"{path.name}: expected at least 5 columns, got {df.shape[1]}")
-    body_col = df.columns[3]
-    df = df.rename(columns={**COLUMN_MAP, body_col: "body"})
+    resolved = _resolve_columns(df, path.name)
+    rename = {orig: canonical for canonical, orig in resolved.items()}
+    df = df.rename(columns=rename)
     keep = ["request_id", "request_type", "category", "body", "closed_at"]
     missing = [c for c in keep if c not in df.columns]
     if missing:
@@ -90,8 +130,11 @@ def load_all_raw(raw_dir: Path = RAW_DIR) -> pd.DataFrame:
 
 def _enrich_one(row, prefer_llm: bool) -> pd.Series:
     e = llm_client.enrich_record(row.category, row.body, prefer_llm=prefer_llm)
+    low = bool(llm_client._is_low_content(row.body))
     return pd.Series({
         "severity": e.severity,
+        "subcategory": getattr(e, "subcategory", "unspecified"),
+        "low_content": low,
         # AR + EN parallel fields
         "severity_reason_ar":   e.severity_reason_ar,
         "severity_reason_en":   e.severity_reason_en,

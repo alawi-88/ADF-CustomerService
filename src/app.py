@@ -56,6 +56,46 @@ app = FastAPI(
     version="1.2.0",
 )
 
+
+# --- security middleware (v1.2.1) -----------------------------------------
+# Restrict CORS by default to same-origin. Operators can override via env.
+import os as _os
+from fastapi.middleware.cors import CORSMiddleware
+_allowed_origins_raw = _os.environ.get("ADF_CS_CORS_ORIGINS", "").strip()
+if _allowed_origins_raw:
+    _allowed_origins = [o.strip() for o in _allowed_origins_raw.split(",") if o.strip()]
+else:
+    # Default: only same-origin requests; the dashboard ships its own HTML.
+    _allowed_origins = []
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=_allowed_origins,
+    allow_credentials=False,
+    allow_methods=["GET", "POST"],
+    allow_headers=["Content-Type"],
+)
+
+
+# --- generic exception handler --------------------------------------------
+# Without this, FastAPI exposes the full Python traceback for unexpected
+# errors. We log server-side and return a stable, opaque message.
+from fastapi.requests import Request as _Request
+from fastapi.responses import JSONResponse as _JSONResponse
+
+
+@app.exception_handler(Exception)
+async def _adf_unhandled_exception_handler(request: _Request, exc: Exception):
+    log.exception("unhandled error on %s %s", request.method, request.url.path)
+    return _JSONResponse(
+        status_code=500,
+        content={
+            "detail": "حدث خطأ غير متوقع. تم تسجيل المشكلة — يرجى المحاولة مجدداً.",
+            "error_id": str(int(__import__("time").time() * 1000)),
+        },
+    )
+# --------------------------------------------------------------------------
+
+
 if STATIC_DIR.exists():
     app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 
@@ -216,6 +256,8 @@ def kpis(
         "active_categories": int((k.by_category > 0).sum()),
         # Weekly delta — last week vs prior 4-week average
         "weekly_delta_pct": _weekly_delta(k.weekly_volume),
+        # New v1.2.0: % of tickets where the body is too short to classify
+        "pct_insufficient_context": round(getattr(k, "pct_insufficient_context", 0.0), 1),
     }
 
 
@@ -668,13 +710,55 @@ async def upload_excel(file: UploadFile = File(...)) -> dict:
         summary = prepare_data.run()
     except Exception as exc:
         log.exception("prepare_data failed after upload")
-        raise HTTPException(status_code=500, detail=f"فشل تحضير البيانات: {exc}")
+        log.exception("prepare_data failed in upload handler")
+        raise HTTPException(
+            status_code=500,
+            detail="فشل تحضير البيانات. تم تسجيل الخطأ — يرجى مراجعة سجلات الخادم."
+        )
 
     _invalidate_cache()
+
+    # Auto-snapshot on every successful upload — so management has an
+    # audit-grade record of "what the dashboard said when this file landed".
+    auto_snapshot_id = None
+    try:
+        from src import recommendations as _recs
+        fdf = _filtered_df_from_filters({})
+        k = analytics.compute_kpis(fdf)
+        kpis_payload = {
+            "total": int(k.total),
+            "pct_complaints": round(k.pct_complaints, 1),
+            "pct_high_severity": round(k.pct_high_severity, 1),
+            "active_categories": int((k.by_category > 0).sum()),
+            "weekly_delta_pct": _weekly_delta(k.weekly_volume),
+            "pct_insufficient_context": round(getattr(k, "pct_insufficient_context", 0.0), 1),
+        }
+        insights_items = analytics.rule_based_insights(fdf, lang="ar") if not fdf.empty else []
+        forecast_payload = analytics.forecast_weekly(fdf, horizon=2, by_category=True) if len(fdf) else None
+        auto_snapshot_id = _recs.create_snapshot({
+            "trigger":        "upload",
+            "source_file":    target.name,
+            "row_count":      int(len(fdf)),
+            "filters":        {},
+            "provider":       _snapshot_active_provider(),
+            "model":          _snapshot_active_model(),
+            "prompt_version": getattr(llm_client, "PROMPT_VERSION", "v1"),
+            "language":       "ar",
+            "insights":       {"insights": insights_items, "source": "engine" if insights_items else "empty"},
+            "kpis":           kpis_payload,
+            "forecast":       forecast_payload,
+            "items":          _items_for_df(fdf),
+        })
+        log.info("auto-snapshot %s created on upload of %s", auto_snapshot_id, target.name)
+    except Exception:
+        # An upload should not fail because the audit-log step crashed.
+        log.exception("auto-snapshot on upload failed (non-fatal)")
+
     return {
         "status": "ok",
         "saved_as": target.name,
         "summary": summary,
+        "snapshot_id": auto_snapshot_id,
     }
 
 
@@ -794,3 +878,190 @@ def ticket_severity(request_id: int, body: SeverityBody) -> dict:
         return tickets.set_severity(request_id, body.severity, body.by_id)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc))
+
+
+
+
+@app.get("/api/subcategories")
+def subcategories(
+    date_from: Optional[date] = Query(None, alias="from"),
+    date_to: Optional[date] = Query(None, alias="to"),
+    category: Optional[list[str]] = Query(None),
+    severity: Optional[list[str]] = Query(None),
+) -> dict:
+    """Aggregate counts by (category, subcategory).
+
+    Until the LLM is connected most rows carry `subcategory='unspecified'`
+    — the response includes a `coverage` field telling the UI what share
+    of rows have a meaningful subcategory.
+    """
+    fdf = _params(date_from, date_to, category, severity)
+    if fdf.empty or "subcategory" not in fdf.columns:
+        return {"items": [], "coverage": 0.0, "total": 0}
+
+    sub_col = fdf["subcategory"].fillna("unspecified")
+    counts = (
+        fdf.assign(subcategory=sub_col)
+        .groupby(["category", "subcategory"], dropna=False)
+        .size()
+        .reset_index(name="count")
+        .sort_values("count", ascending=False)
+    )
+    items = [
+        {
+            "category": str(r["category"]),
+            "subcategory": str(r["subcategory"]),
+            "count": int(r["count"]),
+        }
+        for _, r in counts.iterrows()
+    ]
+    coverage = float((sub_col != "unspecified").sum()) / len(fdf) * 100.0
+    return {"items": items, "coverage": round(coverage, 1), "total": int(len(fdf))}
+
+
+# >>> ADF v1.1.0 SNAPSHOT ENDPOINTS — DO NOT EDIT INSIDE THIS BLOCK >>>
+@app.get("/favicon.ico", include_in_schema=False)
+def _favicon():
+    # Silence the noisy console 404 — UI does not currently ship a favicon.
+    from fastapi.responses import Response
+    return Response(status_code=204)
+
+
+
+from src import recommendations as recs
+
+
+class SnapshotCreateBody(BaseModel):
+    trigger: str = "manual"
+    source_file: Optional[str] = None
+    filters: dict = {}
+    language: str = "ar"
+    created_by_id: Optional[str] = None
+
+
+class SnapshotLockBody(BaseModel):
+    by_id: str
+    note: str = ""
+
+
+def _snapshot_active_provider() -> str:
+    if llm_client.groq_available():
+        return "groq"
+    if llm_client.ollama_available():
+        return "ollama"
+    return "rule"
+
+
+def _snapshot_active_model() -> Optional[str]:
+    if llm_client.groq_available():
+        models = getattr(llm_client, "GROQ_MODELS", None) or []
+        return models[0] if models else None
+    if llm_client.ollama_available():
+        return getattr(llm_client, "OLLAMA_MODEL", None)
+    return None
+
+
+def _filtered_df_from_filters(filters: dict) -> "pd.DataFrame":
+    """Translate the JSON filter shape into the internal _filter_df call."""
+    f = filters or {}
+    df = _load_data()
+
+    def _to_date(v):
+        if not v:
+            return None
+        if isinstance(v, str):
+            try:
+                return date.fromisoformat(v[:10])
+            except ValueError:
+                return None
+        return v
+
+    return _filter_df(
+        df,
+        date_from=_to_date(f.get("from")),
+        date_to=_to_date(f.get("to")),
+        categories=f.get("category") or None,
+        severities=f.get("severity") or None,
+    )
+
+
+def _items_for_df(df) -> list[dict]:
+    out = []
+    for r in df.to_dict("records"):
+        body = r.get("body") or r.get("subject") or ""
+        out.append({
+            "kind": "ticket",
+            "request_id": int(r["request_id"]) if r.get("request_id") is not None else None,
+            "category": r.get("category"),
+            "subcategory": r.get("subcategory"),
+            "severity_ai": r.get("severity"),
+            "severity_reason": r.get("severity_reason") or r.get("severity_reason_ar"),
+            "topic_label": r.get("topic_label") or r.get("topic_label_ar"),
+            "action": r.get("recommended_action") or r.get("recommended_action_ar"),
+            "evidence": str(body)[:200],
+        })
+    return out
+
+
+@app.post("/api/snapshots")
+def api_create_snapshot(body: SnapshotCreateBody):
+    fdf = _filtered_df_from_filters(body.filters or {})
+    k = analytics.compute_kpis(fdf)
+    kpis_payload = {
+        "total": int(k.total),
+        "pct_complaints": round(k.pct_complaints, 1),
+        "pct_high_severity": round(k.pct_high_severity, 1),
+        "active_categories": int((k.by_category > 0).sum()),
+        "weekly_delta_pct": _weekly_delta(k.weekly_volume),
+            "pct_insufficient_context": round(getattr(k, "pct_insufficient_context", 0.0), 1),
+        }
+    insights_items = analytics.rule_based_insights(fdf, lang=body.language) if not fdf.empty else []
+    insights_payload = {"insights": insights_items, "source": "engine" if insights_items else "empty"}
+    forecast_payload = analytics.forecast_weekly(fdf, horizon=2, by_category=True) if len(fdf) else None
+
+    snapshot_id = recs.create_snapshot({
+        "trigger":        body.trigger,
+        "source_file":    body.source_file,
+        "row_count":      int(len(fdf)),
+        "date_from":      (body.filters or {}).get("from"),
+        "date_to":        (body.filters or {}).get("to"),
+        "filters":        body.filters,
+        "provider":       _snapshot_active_provider(),
+        "model":          _snapshot_active_model(),
+        "prompt_version": getattr(llm_client, "PROMPT_VERSION", "v1"),
+        "language":       body.language,
+        "insights":       insights_payload,
+        "kpis":           kpis_payload,
+        "forecast":       forecast_payload,
+        "items":          _items_for_df(fdf),
+        "created_by_id":  body.created_by_id,
+    })
+    return {"snapshot_id": snapshot_id}
+
+
+@app.get("/api/snapshots")
+def api_list_snapshots(limit: int = 50):
+    return {"snapshots": recs.list_snapshots(limit=limit)}
+
+
+@app.get("/api/snapshots/{snapshot_id}")
+def api_get_snapshot(snapshot_id: int):
+    snap = recs.get_snapshot(snapshot_id)
+    if not snap:
+        raise HTTPException(status_code=404, detail="snapshot_not_found")
+    return snap
+
+
+@app.post("/api/snapshots/{snapshot_id}/lock")
+def api_lock_snapshot(snapshot_id: int, body: SnapshotLockBody):
+    recs.lock_snapshot(snapshot_id, by_id=body.by_id, note=body.note)
+    return {"ok": True}
+
+
+@app.get("/api/snapshots/{a_id}/diff/{b_id}")
+def api_diff_snapshots(a_id: int, b_id: int):
+    try:
+        return recs.diff_snapshots(a_id, b_id)
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+# <<< ADF v1.1.0 SNAPSHOT ENDPOINTS <<<

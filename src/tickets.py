@@ -253,3 +253,18 @@ def stats() -> dict:
 # Initialise on import — cheap, idempotent.
 init_db()
 _migrate()
+
+
+
+# v1.2.2: useful indexes for SLA queries on the case-management tables.
+def _ensure_indexes() -> None:
+    with _conn() as c:
+        c.executescript("""
+            CREATE INDEX IF NOT EXISTS ix_tickets_status   ON tickets(status);
+            CREATE INDEX IF NOT EXISTS ix_tickets_assignee ON tickets(assignee_id);
+            CREATE INDEX IF NOT EXISTS ix_comments_request ON comments(request_id);
+            CREATE INDEX IF NOT EXISTS ix_status_request   ON status_history(request_id);
+        """)
+
+
+_ensure_indexes()

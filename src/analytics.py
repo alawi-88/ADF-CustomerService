@@ -83,6 +83,7 @@ class KPIs:
     weekly_volume: pd.Series          # week_start -> count
     pct_high_severity: float
     pct_complaints: float
+    pct_insufficient_context: float = 0.0
 
 
 def compute_kpis(df: pd.DataFrame) -> KPIs:
@@ -95,6 +96,7 @@ def compute_kpis(df: pd.DataFrame) -> KPIs:
             weekly_volume=pd.Series(dtype="int64"),
             pct_high_severity=0.0,
             pct_complaints=0.0,
+            pct_insufficient_context=0.0,
         )
     by_cat = df["category"].value_counts()
     by_sev = (
@@ -110,6 +112,12 @@ def compute_kpis(df: pd.DataFrame) -> KPIs:
     )
     pct_high = float(by_sev.get("عالية", 0)) / len(df) * 100.0
     pct_compl = float((df["category"] == "شكوى").sum()) / len(df) * 100.0
+    if "low_content" in df.columns:
+        pct_insuff = float(df["low_content"].fillna(False).astype(bool).sum()) / len(df) * 100.0
+    else:
+        # Fallback: regenerate the heuristic on the fly (no parquet schema upgrade required)
+        from src.llm_client import _is_low_content
+        pct_insuff = float(df["body"].fillna("").astype(str).map(_is_low_content).sum()) / len(df) * 100.0
     return KPIs(
         total=len(df),
         by_category=by_cat,
@@ -117,6 +125,7 @@ def compute_kpis(df: pd.DataFrame) -> KPIs:
         weekly_volume=weekly,
         pct_high_severity=pct_high,
         pct_complaints=pct_compl,
+        pct_insufficient_context=pct_insuff,
     )
 
 
