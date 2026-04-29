@@ -1,0 +1,59 @@
+# =============================================================================
+# Local + on-prem dev stack for the ADF customer-service POC.
+# =============================================================================
+# Two services:
+#   adf-cs   the FastAPI dashboard (uses Groq cloud or talks to Ollama below)
+#   ollama   optional local LLM, used as fallback when GROQ_API_KEY is unset
+#
+# Bring up:    docker compose up -d
+# Logs:        docker compose logs -f adf-cs
+# Down:        docker compose down                  (keeps volumes)
+# Wipe data:   docker compose down -v               (also removes data volume)
+# =============================================================================
+
+services:
+
+  adf-cs:
+    image: adf-cs:${ADF_CS_VERSION:-latest}
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: adf-cs
+    restart: unless-stopped
+    ports:
+      - "8501:8501"
+    env_file:
+      - .env
+    environment:
+      OLLAMA_BASE_URL: http://ollama:11434
+    volumes:
+      - ./data:/app/data
+    depends_on:
+      ollama:
+        condition: service_started
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8501/api/health',timeout=3).status==200 else 1)"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+
+  ollama:
+    image: ollama/ollama:latest
+    container_name: adf-ollama
+    restart: unless-stopped
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_models:/root/.ollama
+    # Pull the chosen model on first run. Override with OLLAMA_MODEL env var.
+    entrypoint: >
+      /bin/sh -c "
+        ollama serve &
+        sleep 4 &&
+        ollama pull ${OLLAMA_MODEL:-qwen2.5:7b-instruct} &&
+        wait
+      "
+
+volumes:
+  ollama_models:
