@@ -1,5 +1,20 @@
 # Changelog
 
+## [1.7.0] — 2026-05-04
+
+### Fixed
+- **Emoji glyphs replaced with monochrome SVG icons.** Four inline
+  emoji that bypassed the icon system and rendered as colored Unicode
+  pictographs on every OS — `⚠ ✎ 💬` — have been swapped to proper
+  outline-stroke `<svg><use/></svg>` references that obey the v1.6.0
+  icon style spec (1.5 stroke, currentColor, no fills).
+  - Data-quality pill `⚠` → `#i-alert`
+  - Severity-override marker `✎` → `#i-edit` (new symbol)
+  - Ticket-comment count `💬` → `#i-comment` (new symbol)
+- New `.icon--xs` size modifier (13×13) for inline-with-text icon
+  usage, so replacement glyphs sit on the baseline like the original
+  emoji did, but stay monochrome.
+
 ## [1.6.0] — 2026-05-04
 
 Icon style unification — DGA-aligned outline-only spec. Per project

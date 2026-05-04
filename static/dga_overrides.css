@@ -257,6 +257,15 @@ textarea:focus-visible,
 }
 
 /* =========================================================================
+   v1.7.0 — emoji-free: small inline icon size for replacement glyphs
+   ========================================================================= */
+.icon--xs {
+  width: 13px;
+  height: 13px;
+  vertical-align: -2px;
+}
+
+/* =========================================================================
    v1.6.0 — DGA icon style: outline strokes only, never tinted
    ========================================================================= */
 /* All icons inherit color from their text container (currentColor).
