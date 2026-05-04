@@ -682,149 +682,149 @@
 /* ====== i18n =========================================================== */
 const I18N = {
   ar: {
-    'app.title':'منصّة تحليل مشاركات المستفيدين',
-    'app.subtitle':'تحليل ذكيّ لمشاركات مستفيدي صندوق التنمية الزراعية عبر القنوات الرقميّة',
+    'app.title':'منصة تحليل مشاركات المستفيدين',
+    'app.subtitle':'تحليل ذكي لمشاركات مستفيدي صندوق التنمية الزراعية عبر القنوات الرقمية',
     'action.upload':'رفع ملف','action.reprocess':'إعادة المعالجة',
     'action.export':'تصدير','action.cancel':'إلغاء',
     'action.export_xlsx':'تصدير إلى إكسل',
-    'action.exporting':'جارٍ التصدير…',
-    'action.export_failed':'تعذّر إنشاء الملف، يُرجى المحاولة مرّة أخرى.',
-    'footer.org':'صندوق التنمية الزراعيّة',
-    'footer.app':'منصّة تحليل مشاركات المستفيدين — جميع الحقوق محفوظة',
-    'status.loading':'جارٍ التحميل','status.engine':'محرّك التحليل',
-    'nav.title':'الأقسام','nav.overview':'نظرة عامّة','nav.patterns':'الأنماط والاتّجاهات',
-    'nav.alerts':'الإنذار المبكّر','nav.actions':'الإجراءات المقترحة','nav.qa':'استعلام مباشر',
+    'action.exporting':'جاري التصدير...',
+    'action.export_failed':'تعذر إنشاء الملف، يرجى المحاولة مرة أخرى.',
+    'footer.org':'صندوق التنمية الزراعية',
+    'footer.app':'منصة تحليل مشاركات المستفيدين — جميع الحقوق محفوظة',
+    'status.loading':'جاري التحميل','status.engine':'حالة التحليل',
+    'nav.title':'الأقسام','nav.overview':'نظرة عامة','nav.patterns':'الأنماط',
+    'nav.alerts':'الإنذار المبكر','nav.actions':'الإجراءات','nav.qa':'استعلام مباشر',
     'nav.data':'إدارة البيانات',
-    'nav.snapshots':'سجلّ التوصيات',
-    'snap.title':'سجلّ التوصيات','snap.subtitle':'أرشيف موثَّق لكلّ مجموعة توصيات أصدرها النظام، يتضمّن عوامل التصفية المُطبَّقة، والنموذج المستخدَم، وإصدار النصّ التوجيهيّ، وبيانات المسؤول الذي قام بإقفال اللقطة.',
-    'snap.create':'إنشاء لقطة جديدة','snap.compare':'مقارنة اللقطتَين المحدَّدتَين','snap.lock':'إقفال للأرشفة','snap.locked':'مقفلة','snap.unlocked':'مفتوحة','snap.no_runs':'لا توجد لقطات حتّى الآن. يمكنك رفع ملف جديد، أو الضغط على «إنشاء لقطة جديدة».',
-    'snap.col.id':'#','snap.col.created':'تاريخ الإنشاء','snap.col.trigger':'المصدر','snap.col.source':'الملف','snap.col.rows':'عدد السجلّات','snap.col.provider':'المزوّد','snap.col.lang':'اللغة','snap.col.locked':'الحالة','snap.col.actions':'الإجراءات',
-    'snap.diff.title':'الفرق بين اللقطتَين','snap.diff.kpi':'مؤشّرات الأداء','snap.diff.added':'رؤى مُضافة','snap.diff.removed':'رؤى مُزالة','snap.diff.severity':'تذاكر تغيّرت خطورتها',
-    'snap.lock.prompt':'ملاحظة الإدارة (اختياريّة):',
-    'snap.trigger.upload':'رفع ملف','snap.trigger.manual':'يدويّ','snap.trigger.scheduled':'مجدوَل',
-    'filters.title':'عوامل التصفية','filters.from':'من','filters.to':'إلى',
-    'filters.category':'الفئة','filters.severity':'مستوى الخطورة','filters.search':'بحث في النصوص',
-    'filters.toggle':'تحديد الكلّ / إلغاء','filters.reset':'إعادة تعيين',
-    'filters.status':'حالة التذكرة','filters.assignee':'المسؤول','filters.unassigned':'غير مُسنَدة',
-    'overview.title':'نظرة عامّة','overview.subtitle':'ملخّص أداء قنوات التواصل، والمؤشّرات المستخلصة من مشاركات المستفيدين خلال الفترة المختارة.',
-    'overview.insights':'رؤى الذكاء الاصطناعيّ','overview.insights.hint':'يستعرض الذكاء الاصطناعيّ مجمل البيانات لاستخلاص رؤى عمليّة قابلة للتنفيذ هذا الأسبوع.',
-    'ai.patterns.summary':'ملخّص الذكاء الاصطناعيّ للأنماط',
-    'ai.patterns.summary.hint':'قراءة موجزة لأبرز ما تُظهره الأنماط في الفترة الحاليّة.',
-    'ai.patterns.reco':'توصيات الذكاء الاصطناعيّ للأنماط',
-    'ai.patterns.reco.hint':'إجراءات ذات أولويّة مستخلصة من الموضوعات المتكرّرة والمتصاعدة.',
-    'ai.dq.imputed':'تنبيه بشأن جودة البيانات',
-    'ai.dq.imputed.hint':'يوجد {n} طلبًا من أصل {tot} في الملف بدون تاريخ إغلاق — تمّ افتراض تاريخ ليُحتسب ضمن التحليل.',
-    'ai.summary.title':'ملخّص الذكاء الاصطناعيّ',
-    'ai.summary.hint':'سرد مكثّف لأبرز ما تُظهره بياناتك خلال الفترة الحاليّة.',
-    'ai.reco.title':'توصيات الذكاء الاصطناعيّ',
-    'ai.reco.hint':'الإجراءات الأعلى أثرًا المستخلَصة من الرؤى أعلاه — مرتّبة بحسب الأولويّة.',
+    'nav.snapshots':'سجل التوصيات',
+    'snap.title':'سجل التوصيات','snap.subtitle':'أرشيف التوصيات الصادرة عن النظام، مع الفلاتر المطبقة، والنموذج المستخدم، وحالة الإقفال.',
+    'snap.create':'إنشاء لقطة','snap.compare':'مقارنة المحددتين','snap.lock':'إقفال للأرشفة','snap.locked':'مقفلة','snap.unlocked':'مفتوحة','snap.no_runs':'لا توجد لقطات بعد. ارفع ملفا جديدا أو اضغط «إنشاء لقطة».',
+    'snap.col.id':'#','snap.col.created':'التاريخ','snap.col.trigger':'المصدر','snap.col.source':'الملف','snap.col.rows':'العدد','snap.col.provider':'المزود','snap.col.lang':'اللغة','snap.col.locked':'الحالة','snap.col.actions':'الإجراءات',
+    'snap.diff.title':'الفرق بين اللقطتين','snap.diff.kpi':'مؤشرات الأداء','snap.diff.added':'تحليلات جديدة','snap.diff.removed':'تحليلات أزيلت','snap.diff.severity':'تذاكر تغيرت خطورتها',
+    'snap.lock.prompt':'ملاحظة الإدارة (اختياري):',
+    'snap.trigger.upload':'رفع','snap.trigger.manual':'يدوي','snap.trigger.scheduled':'مجدول',
+    'filters.title':'الفلاتر','filters.from':'من','filters.to':'إلى',
+    'filters.category':'الفئة','filters.severity':'الخطورة','filters.search':'بحث في النصوص',
+    'filters.toggle':'تحديد الكل / إلغاء','filters.reset':'إعادة تعيين',
+    'filters.status':'حالة التذكرة','filters.assignee':'المسؤول','filters.unassigned':'غير مسندة',
+    'overview.title':'نظرة عامة','overview.subtitle':'ملخص أداء قنوات التواصل والمؤشرات الرئيسية للفترة المختارة.',
+    'overview.insights':'تحليلات الذكاء الاصطناعي','overview.insights.hint':'يحلل الذكاء الاصطناعي البيانات لاستخلاص نقاط قابلة للتنفيذ هذا الأسبوع.',
+    'ai.patterns.summary':'ملخص الأنماط',
+    'ai.patterns.summary.hint':'قراءة موجزة لما تكشفه الأنماط في الفترة الحالية.',
+    'ai.patterns.reco':'توصيات الأنماط',
+    'ai.patterns.reco.hint':'إجراءات بأولوية مستخلصة من الموضوعات المتكررة وما هو في ارتفاع.',
+    'ai.dq.imputed':'تنبيه جودة البيانات',
+    'ai.dq.imputed.hint':'يوجد {n} طلب من أصل {tot} في الملف بدون تاريخ إغلاق — تم افتراض تاريخ ليحتسب في التحليل.',
+    'ai.summary.title':'الملخص',
+    'ai.summary.hint':'سرد قصير لأبرز ما تظهره بياناتك خلال الفترة الحالية.',
+    'ai.reco.title':'التوصيات',
+    'ai.reco.hint':'الإجراءات الأكثر تأثيرا، مرتبة بالأولوية.',
     'pipeline.title':'حالة التذاكر',
-    'pipeline.hint':'توزيع التذاكر الحاليّة على مراحل المعالجة.',
-    'ai.ticket.summary':'ملخّص الذكاء الاصطناعيّ',
-    'ai.ticket.suggestions':'اقتراحات الذكاء الاصطناعيّ',
-    'ai.ticket.recommendation':'توصية الذكاء الاصطناعيّ',
+    'pipeline.hint':'توزيع التذاكر الحالية على مراحل المعالجة.',
+    'ai.ticket.summary':'ملخص',
+    'ai.ticket.suggestions':'اقتراحات',
+    'ai.ticket.recommendation':'توصية',
     'ai.ticket.similar':'تذاكر مشابهة',
-    'patterns.title':'الأنماط والاتّجاهات','patterns.subtitle':'الموضوعات الأكثر تكرارًا، واتّجاهات الخطورة عبر الزمن، والموضوعات المتصاعدة في الفترة الأخيرة.',
-    'alerts.title':'الإنذار المبكّر','alerts.subtitle':'ارتفاعات غير معتادة في الفئات أو الموضوعات خلال الأسبوع الأخير، مع توصيات استباقيّة للتحسين.',
-    'actions.title':'الإجراءات المقترحة','actions.subtitle':'تصنيف ذكيّ لكلّ طلب مع تبرير مستوى الخطورة، وإجراء جاهز للاعتماد.',
+    'patterns.title':'الأنماط','patterns.subtitle':'الموضوعات الأكثر تكرارا، اتجاه الخطورة، والموضوعات في ارتفاع.',
+    'alerts.title':'الإنذار المبكر','alerts.subtitle':'ارتفاعات غير معتادة في الأسبوع الأخير، مع توصيات استباقية.',
+    'actions.title':'الإجراءات المقترحة','actions.subtitle':'تصنيف ذكي لكل طلب مع تبرير الخطورة وإجراء جاهز للاعتماد.',
     'actions.high_only':'الخطورة العالية فقط',
-    'qa.title':'استعلام مباشر — اسأل بياناتك','qa.subtitle':'اطرح سؤالًا بلغة طبيعيّة على الشريحة المُصفّاة من البيانات.',
-    'qa.label':'سؤالك','qa.placeholder':'مثال: ما أبرز ثلاثة موضوعات تستحقّ تحسينًا استباقيًا؟',
-    'qa.submit':'اسأل','qa.answer':'الإجابة','qa.context_toggle':'عرض ملخّص البيانات المستخدَمة كسياق',
-    'data.title':'إدارة البيانات','data.subtitle':'رفع ملفات إكسل جديدة لإلحاقها بالبيانات الحاليّة. يتمّ الدمج مع إزالة التكرار تلقائيًا.',
-    'data.files':'الملفات المُدخَلة','data.col.name':'اسم الملف','data.col.size':'الحجم','data.col.added':'تاريخ الإضافة',
+    'qa.title':'اسأل بياناتك','qa.subtitle':'اطرح سؤالا بلغة طبيعية على الشريحة المصفاة.',
+    'qa.label':'سؤالك','qa.placeholder':'مثال: ما أبرز ثلاثة موضوعات تستحق التحسين؟',
+    'qa.submit':'اسأل','qa.answer':'الإجابة','qa.context_toggle':'عرض ملخص البيانات المستخدمة',
+    'data.title':'إدارة البيانات','data.subtitle':'ارفع ملفات إكسل جديدة لإلحاقها بالبيانات الحالية. يتم الدمج وإزالة التكرار تلقائيا.',
+    'data.files':'الملفات المدخلة','data.col.name':'اسم الملف','data.col.size':'الحجم','data.col.added':'تاريخ الإضافة',
     'data.format':'صيغة الملف المطلوبة','data.format.hint':'يجب أن يحتوي الملف على الأعمدة التالية بالترتيب:',
-    'data.format.id':'الرقم — معرّف الطلب الفريد','data.format.type':'الطلب — نوع الطلب',
-    'data.format.cat':'العنوان — فئة الطلب (شكوى / استفسار / اقتراح / دعم فنّيّ / خدمة المراجعين)',
-    'data.format.body':'نصّ الطلب — وصف موجز','data.format.date':'تاريخ الانتهاء — تاريخ إغلاق الطلب',
-    'col.id':'رقم الطلب','col.body':'نصّ الطلب','col.category':'الفئة','col.topic':'الموضوع',
-    'col.severity':'الخطورة','col.severity_reason':'تبرير الخطورة','col.action':'الإجراء المقترح','col.closed':'تاريخ الإغلاق',
-    'sev.high':'عالية','sev.med':'متوسّطة','sev.low':'منخفضة',
-    'chart.weekly':'تطوّر حجم الطلبات أسبوعيًّا',
-    'chart.categories':'التوزيع بحسب الفئة',
-    'chart.severity':'التوزيع بحسب مستوى الخطورة',
-    'chart.severity.hint':'يُستنبَط مستوى الخطورة من تحليل النصّ والفئة لكلّ طلب.',
-    'chart.forecast':'توقّع الأسبوعين القادمَين',
-    'chart.forecast.hint':'تنبّؤ مبنيّ على التنعيم الأسّيّ ضمن نطاق ثقة.',
-    'chart.topics':'أعلى ١٠ موضوعات تكرارًا',
-    'chart.topics.hint':'يُشير اللون إلى نسبة الخطورة العالية ضمن كلّ موضوع.',
-    'chart.subcategories':'التصنيفات الفرعيّة بحسب الفئة','chart.subcategories.hint':'تفصيل أدقّ ضمن كلّ فئة (يُفعَّل عند ربط نموذج ذكاء اصطناعيّ).','chart.subcategories.coverage':'نسبة التذاكر ذات تصنيف فرعيّ معروف: {pct}٪','chart.subcategories.empty':'لا تزال جميع التذاكر دون تصنيف فرعيّ. يلزم ربط Groq أو Ollama لتفعيل التصنيف الفرعيّ.','chart.count':'العدد',
-    'chart.severity_weekly':'اتّجاه الخطورة عبر الأسابيع',
-    'chart.momentum':'موضوعات متصاعدة','chart.momentum.hint':'مقارنة آخر ٤ أسابيع بالفترة المماثلة قبلها.',
-    'chart.weekly_cat':'الاتّجاه الأسبوعيّ بحسب الفئة',
-    'chart.matrix':'مصفوفة الفئة × الخطورة','chart.matrix.hint':'اضغط على الخليّة لعرض التفاصيل.',
-    'chart.recurring':'حالات متكرّرة','chart.recurring.hint':'طلبات متماثلة النصّ — قد تُشير إلى مستفيد متكرّر، أو إلى إشكاليّة منهجيّة.',
-    'caption.weekly':'بلغ الذروة في أسبوع {peak} ({peakv} طلب). المتوسّط الأسبوعيّ: {avg} طلب.',
-    'caption.cats':'الفئة «{top}» هي الأعلى بنسبة {topPct}، وأقلّها تمثيلًا «{low}» بنسبة {lowPct}.',
-    'caption.sev':'{high} من الطلبات بخطورة عالية. كلّما ارتفعت النسبة، ازدادت الحاجة إلى تدخّل مباشر.',
-    'caption.fc':'التوقّع للأسبوع القادم: {next} طلب (مقابل {last} في الأسبوع الأخير، نطاق الثقة {lo}–{hi}).',
+    'data.format.id':'الرقم — معرف الطلب','data.format.type':'الطلب — نوع الطلب',
+    'data.format.cat':'العنوان — فئة الطلب (شكوى / استفسار / اقتراح / دعم فني / خدمة المراجعين)',
+    'data.format.body':'نص الطلب — وصف موجز','data.format.date':'تاريخ الانتهاء — تاريخ إغلاق الطلب',
+    'col.id':'رقم الطلب','col.body':'نص الطلب','col.category':'الفئة','col.topic':'الموضوع',
+    'col.severity':'الخطورة','col.severity_reason':'سبب الخطورة','col.action':'الإجراء المقترح','col.closed':'تاريخ الإغلاق',
+    'sev.high':'عالية','sev.med':'متوسطة','sev.low':'منخفضة',
+    'chart.weekly':'حجم الطلبات أسبوعيا',
+    'chart.categories':'التوزيع حسب الفئة',
+    'chart.severity':'التوزيع حسب الخطورة',
+    'chart.severity.hint':'مستوى الخطورة مستخلص من النص والفئة لكل طلب.',
+    'chart.forecast':'توقع الأسبوعين القادمين',
+    'chart.forecast.hint':'تنبؤ مبني على التنعيم الأسي ضمن نطاق ثقة.',
+    'chart.topics':'أعلى 10 موضوعات تكرارا',
+    'chart.topics.hint':'يدل اللون على نسبة الخطورة العالية في كل موضوع.',
+    'chart.subcategories':'التصنيفات الفرعية حسب الفئة','chart.subcategories.hint':'تفصيل أدق داخل كل فئة (يفعل عند ربط نموذج ذكاء اصطناعي).','chart.subcategories.coverage':'نسبة التذاكر ذات تصنيف فرعي معروف: {pct}%','chart.subcategories.empty':'جميع التذاكر بدون تصنيف فرعي. اربط Groq أو Ollama لتفعيل التصنيف الفرعي.','chart.count':'العدد',
+    'chart.severity_weekly':'اتجاه الخطورة عبر الأسابيع',
+    'chart.momentum':'موضوعات في ارتفاع','chart.momentum.hint':'مقارنة آخر 4 أسابيع بالفترة المماثلة قبلها.',
+    'chart.weekly_cat':'الاتجاه الأسبوعي حسب الفئة',
+    'chart.matrix':'مصفوفة الفئة × الخطورة','chart.matrix.hint':'اضغط الخلية لعرض التفاصيل.',
+    'chart.recurring':'حالات متكررة','chart.recurring.hint':'طلبات متطابقة النص — قد تشير إلى مستفيد متكرر أو مشكلة منهجية.',
+    'caption.weekly':'الذروة في أسبوع {peak} ({peakv} طلب). المتوسط الأسبوعي: {avg} طلب.',
+    'caption.cats':'الفئة «{top}» هي الأعلى بنسبة {topPct}، وأقلها «{low}» بنسبة {lowPct}.',
+    'caption.sev':'{high} من الطلبات بخطورة عالية. كلما ارتفعت النسبة، زادت الحاجة إلى تدخل مباشر.',
+    'caption.fc':'التوقع للأسبوع القادم: {next} طلب (مقابل {last} في الأسبوع الأخير، نطاق الثقة {lo}–{hi}).',
     'caption.topics':'الموضوع الأبرز «{name}» بـ{count} طلب، وخطورة عالية {high}.',
-    'caption.sevW':'تشكّل الخطورة العالية {pct} من إجماليّ الطلبات في الفترة. الاتّجاه: {trend}.',
-    'caption.weeklyCat':'تُظهر الفئات اتّجاهات متباينة عبر الأسابيع.',
-    'caption.matrix':'تتركّز الخطورة العالية في {pair}.',
-    'trend.up':'تصاعد','trend.down':'انحسار','trend.flat':'مستقرّ',
-    'kpi.total':'إجماليّ الطلبات','kpi.complaints':'نسبة الشكاوى',
-    'kpi.high':'الخطورة العالية','kpi.cats':'الفئات النشطة','kpi.insufficient':'سياق غير كافٍ','kpi.insufficient.hint':'الطلبات التي يقلّ نصّها عن أربعة أحرف ذات معنى، أو يطابق عبارات عامّة (مثل: hi، test، عام).','kpi.insufficient.sub':'تذاكر تحتاج إلى توضيح من المستفيد قبل تصنيفها',
-    'kpi.delta.up':'↑ {pct} مقارنةً بالمتوسّط الأسبوعيّ','kpi.delta.down':'↓ {pct} مقارنةً بالمتوسّط الأسبوعيّ',
+    'caption.sevW':'الخطورة العالية تشكل {pct} من الإجمالي خلال الفترة. الاتجاه: {trend}.',
+    'caption.weeklyCat':'الفئات تظهر اتجاهات متباينة عبر الأسابيع.',
+    'caption.matrix':'تتركز الخطورة العالية في {pair}.',
+    'trend.up':'في ارتفاع','trend.down':'في انخفاض','trend.flat':'مستقر',
+    'kpi.total':'إجمالي الطلبات','kpi.complaints':'نسبة الشكاوى',
+    'kpi.high':'الخطورة العالية','kpi.cats':'الفئات النشطة','kpi.insufficient':'سياق غير كاف','kpi.insufficient.hint':'الطلبات التي يقل نصها عن 4 أحرف مفهومة، أو تطابق عبارات عامة (مثل: hi، test، عام).','kpi.insufficient.sub':'تذاكر تحتاج توضيحا من المستفيد قبل التصنيف',
+    'kpi.delta.up':'↑ {pct} مقابل المتوسط الأسبوعي','kpi.delta.down':'↓ {pct} مقابل المتوسط الأسبوعي',
     'kpi.delta.na':'غير متاح',
     'insight.tag.evidence':'الملاحظة','insight.tag.action':'الإجراء','insight.tag.metric':'المقياس',
-    'drawer.eyebrow':'السجلّات المرتبطة',
-    'drawer.records':'{n} سجلًّا مطابقًا · معروض {m}',
-    'drawer.empty':'لا توجد سجلّات مطابقة.',
-    'drawer.topic':'الموضوع','drawer.severity_reason':'تبرير الخطورة','drawer.action':'الإجراء المقترح',
-    'upload.title':'رفع ملف إكسل جديد','upload.note':'سيتمّ دمج الملف مع البيانات الحاليّة. الطلبات بنفس الرقم لن تتكرّر.',
-    'upload.drop':'اسحب الملف هنا، أو اضغط للاختيار','upload.hint':'صيغة .xlsx فقط — الحدّ الأقصى ٥٠ ميغابايت',
-    'upload.uploading':'جارٍ رفع الملف…','upload.processing':'جارٍ التحليل والتصنيف…',
-    'upload.success':'تمّت المعالجة بنجاح','upload.submit':'رفع ومعالجة',
-    'engine.groq':'Groq متاح','engine.ollama':'النموذج المحلّيّ متاح','engine.rule':'الوضع الآمن — تحليلات قاعديّة',
-    'examples.q1':'ما أبرز ثلاثة موضوعات تستحقّ تحسينًا استباقيًا؟',
-    'examples.q2':'هل ثمّة تصاعد في شكاوى السداد؟',
-    'examples.q3':'ما الفئات الأقلّ شيوعًا، وما تبرير إعطائها أولويّة أدنى؟',
-    'na':'—','of':'من','records':'سجلّ','request':'طلب',
-    'chart.linked':'الطلبات المترابطة دلاليًّا',
-    'chart.linked.hint':'يجمع الذكاء الاصطناعيّ الطلبات المتشابهة في القصد، ويُلخّص ما يطلبه المستفيد فعليًّا.',
+    'drawer.eyebrow':'السجلات المرتبطة',
+    'drawer.records':'{n} سجل مطابق · معروض {m}',
+    'drawer.empty':'لا توجد سجلات مطابقة.',
+    'drawer.topic':'الموضوع','drawer.severity_reason':'سبب الخطورة','drawer.action':'الإجراء المقترح',
+    'upload.title':'رفع ملف إكسل جديد','upload.note':'سيتم دمج الملف مع البيانات الحالية. الطلبات بنفس الرقم لن تتكرر.',
+    'upload.drop':'اسحب الملف هنا، أو اضغط للاختيار','upload.hint':'صيغة .xlsx فقط — حد أقصى 50 ميغابايت',
+    'upload.uploading':'جاري رفع الملف...','upload.processing':'جاري التحليل والتصنيف...',
+    'upload.success':'تمت المعالجة بنجاح','upload.submit':'رفع ومعالجة',
+    'engine.groq':'Groq متاح','engine.ollama':'النموذج المحلي متاح','engine.rule':'الوضع الآمن — تحليلات قاعدية',
+    'examples.q1':'ما أبرز ثلاثة موضوعات تستحق التحسين؟',
+    'examples.q2':'هل هناك ارتفاع في شكاوى السداد؟',
+    'examples.q3':'ما الفئات الأقل شيوعا، ولماذا قد نتجاهلها؟',
+    'na':'—','of':'من','records':'سجل','request':'طلب',
+    'chart.linked':'الطلبات المرتبطة',
+    'chart.linked.hint':'يجمع الذكاء الاصطناعي الطلبات المتشابهة في القصد ويلخص ما يطلبه المستفيد فعليا.',
     'linked.intent':'ما يطلبه المستفيد',
-    'linked.response':'الإجراء الموصى به للموظّف',
+    'linked.response':'الإجراء الموصى به للموظف',
     'linked.examples':'أمثلة',
-    'linked.tickets':'فتح جميع التذاكر',
-    'linked.refine':'تنقيح بالذكاء الاصطناعيّ',
-    'linked.refining':'جارٍ التحليل…',
+    'linked.tickets':'فتح كل التذاكر',
+    'linked.refine':'تنقيح بالذكاء الاصطناعي',
+    'linked.refining':'جاري التحليل...',
     'linked.rationale':'سبب التحليل',
-    'pop.title':'مقارنة الفترتَين',
-    'pop.title.week':'مقارنة آخر ٧ أيّام بالأيّام السابقة',
-    'pop.title.month':'مقارنة آخر ٣٠ يومًا بالفترة المماثلة',
-    'pop.title.quarter':'مقارنة آخر ٩٠ يومًا بالفترة المماثلة',
-    'pop.period.week':'أسبوعيّ',
-    'pop.period.month':'شهريّ',
-    'pop.period.quarter':'ربعيّ',
-    'pop.total':'إجماليّ الطلبات','pop.complaints':'الشكاوى','pop.high':'الخطورة العالية',
-    'pop.empty':'لا تتوفّر بيانات كافية للمقارنة.',
+    'pop.title':'مقارنة الفترتين',
+    'pop.title.week':'آخر 7 أيام مقابل السابقة',
+    'pop.title.month':'آخر 30 يوما مقابل المماثلة',
+    'pop.title.quarter':'آخر 90 يوما مقابل المماثلة',
+    'pop.period.week':'أسبوعي',
+    'pop.period.month':'شهري',
+    'pop.period.quarter':'ربعي',
+    'pop.total':'إجمالي الطلبات','pop.complaints':'الشكاوى','pop.high':'الخطورة العالية',
+    'pop.empty':'لا تتوفر بيانات كافية للمقارنة.',
     'export.menu.head':'فترة التصدير',
-    'export.menu.current':'العرض الحاليّ (مع الفلاتر)',
-    'export.menu.7d':'آخر ٧ أيّام',
-    'export.menu.30d':'آخر ٣٠ يومًا',
-    'export.menu.90d':'آخر ٩٠ يومًا',
+    'export.menu.current':'العرض الحالي (مع الفلاتر)',
+    'export.menu.7d':'آخر 7 أيام',
+    'export.menu.30d':'آخر 30 يوما',
+    'export.menu.90d':'آخر 90 يوما',
     'export.menu.this_month':'هذا الشهر',
     'export.menu.last_month':'الشهر الماضي',
     'export.menu.all':'كامل البيانات',
     'export.menu.aria':'خيارات التصدير حسب الفترة',
-    'insight.kind.anomaly':'تنبيه','insight.kind.risk':'خطر','insight.kind.momentum':'اتّجاه',
+    'insight.kind.anomaly':'تنبيه','insight.kind.risk':'خطر','insight.kind.momentum':'اتجاه',
     'insight.kind.complaints':'شكاوى','insight.kind.opportunity':'فرصة','insight.kind.recurring':'تكرار',
-    'insight.examples':'أمثلة من البيانات','insight.see_records':'عرض السجلّات',
-    'insight.causes':'الأسباب المحتملة (تحليل ٢٠/٨٠)',
-    'preset.7d':'٧ أيّام','preset.30d':'٣٠ يومًا','preset.90d':'٩٠ يومًا',
+    'insight.examples':'أمثلة من البيانات','insight.see_records':'عرض السجلات',
+    'insight.causes':'الأسباب المحتملة (تحليل 20/80)',
+    'preset.7d':'7 أيام','preset.30d':'30 يوما','preset.90d':'90 يوما',
     'preset.thisMonth':'هذا الشهر','preset.lastMonth':'الشهر الماضي','preset.all':'كامل البيانات',
     'ticket.title':'بطاقة الطلب','ticket.status':'الحالة','ticket.assignee':'المسؤول',
-    'ticket.unassigned':'غير مُسنَدة','ticket.acting_as':'تتصرّف بصفة',
-    'ticket.activity':'سجلّ النشاط','ticket.add_comment':'إضافة تعليق',
+    'ticket.unassigned':'غير مسندة','ticket.acting_as':'تتصرف بصفة',
+    'ticket.activity':'سجل النشاط','ticket.add_comment':'إضافة تعليق',
     'ticket.send':'إرسال','ticket.no_comments':'لا توجد تعليقات بعد.',
     'ticket.no_history':'لا تغييرات بعد.',
     'ticket.record':'تفاصيل الطلب','ticket.recommended':'الإجراء المقترح',
     'ticket.column':'الحالة',
-    'ticket.severity_ai_default':'تصنيف ذكيّ (تلقائيّ)',
-    'status.open':'مفتوحة','status.in_progress':'قيد المعالجة','status.pending':'بانتظار الردّ',
+    'ticket.severity_ai_default':'تصنيف ذكي (تلقائي)',
+    'status.open':'مفتوحة','status.in_progress':'قيد المعالجة','status.pending':'بانتظار الرد',
     'status.resolved':'محلولة','status.closed':'مغلقة',
-    'history.changed':'غيّر الحالة من','history.to':'إلى',
+    'history.changed':'غير الحالة من','history.to':'إلى',
   },
   en: {
     'app.title':'Beneficiary Engagement Analytics',
@@ -995,17 +995,18 @@ function applyI18n() {
 }
 
 /* ====== Number formatting ============================================== */
+// v1.5.0 — render Western (Hindu-Arabic) digits in both AR and EN. The
+// previous Arabic-Indic conversion (٠-٩) was reverted at the user's
+// request. Kept as a function so the (now legacy) call sites still work.
 const _AR_DIGITS = '٠١٢٣٤٥٦٧٨٩';
-function toAr(s) { return String(s ?? '').replace(/[0-9]/g, d => _AR_DIGITS[+d]); }
-function nm(n) { // localized numeric for current language (with grouping)
+function toAr(s) { return String(s ?? ''); }
+function nm(n) { // grouped number, e.g. 1,717
   if (n == null) return t('na');
-  const s = Number(n).toLocaleString('en-US');
-  return LANG === 'ar' ? toAr(s) : s;
+  return Number(n).toLocaleString('en-US');
 }
-function nmId(n) { // raw digits — no thousand separators (used for IDs)
+function nmId(n) { // raw digits, no grouping (IDs)
   if (n == null) return t('na');
-  const s = String(n);
-  return LANG === 'ar' ? toAr(s) : s;
+  return String(n);
 }
 // Render an ID with the # symbol always to the LEFT of the digits, even
 // in RTL contexts. We isolate the whole token as LTR so the bidi engine
@@ -1843,6 +1844,23 @@ function renderDrillRows(data) {
   body.innerHTML = `<div class="drill-meta">${t('drawer.records', { n: fmtInt(data.total), m: fmtInt(data.rows.length) })}</div>` +
     data.rows.map(r => {
       const sevClass = r.severity === 'عالية' ? 'pill--high' : r.severity === 'متوسطة' ? 'pill--med' : 'pill--low';
+      // v1.5.0 — only render rows whose underlying value is actually present.
+      // The historical "—" placeholder for missing topic/reason/action made
+      // the panel look empty; now we just omit the line.
+      const hasVal = (v) => v != null && String(v).trim() !== '' && String(v).trim() !== '—';
+      const lines = [];
+      if (hasVal(r.body)) {
+        lines.push(`<div class="drill-row__body">${escapeHtml(r.body)}</div>`);
+      }
+      if (hasVal(r.topic_label)) {
+        lines.push(`<div class="drill-row__why"><strong>${t('drawer.topic')}:</strong> ${escapeHtml(r.topic_label)}</div>`);
+      }
+      if (hasVal(r.severity_reason)) {
+        lines.push(`<div class="drill-row__why"><strong>${t('drawer.severity_reason')}:</strong> ${escapeHtml(r.severity_reason)}</div>`);
+      }
+      if (hasVal(r.recommended_action)) {
+        lines.push(`<div class="drill-row__action"><strong>${t('drawer.action')}:</strong> ${escapeHtml(r.recommended_action)}</div>`);
+      }
       return `<div class="drill-row">
         <div class="drill-row__head">
           <span class="pill ${sevClass}">${escapeHtml(SEV_LABEL(r.severity))}</span>
@@ -1850,10 +1868,7 @@ function renderDrillRows(data) {
           <span class="drill-row__id">${hashId(r.request_id)}</span>
           <span class="drill-row__id">${fmtDate(r.closed_at)}</span>
         </div>
-        <div class="drill-row__body">${escapeHtml(r.body || t('na'))}</div>
-        <div class="drill-row__why"><strong>${t('drawer.topic')}:</strong> ${escapeHtml(r.topic_label || t('na'))}</div>
-        <div class="drill-row__why"><strong>${t('drawer.severity_reason')}:</strong> ${LANG==='ar'?toAr(escapeHtml(r.severity_reason || t('na'))):escapeHtml(r.severity_reason || t('na'))}</div>
-        <div class="drill-row__action"><strong>${t('drawer.action')}:</strong> ${LANG==='ar'?toAr(escapeHtml(r.recommended_action)):escapeHtml(r.recommended_action)}</div>
+        ${lines.join('')}
       </div>`;
     }).join('');
 }
@@ -2044,13 +2059,33 @@ function renderKpis(k) {
       <div class="kpi__value">${fmtPct(k.pct_insufficient_context || 0)}</div>
       <div class="kpi__delta">${t('kpi.insufficient.sub')}</div></div>`;
 }
+// v1.5.0 — render the AI summary as a bullet list rather than a paragraph.
+// Splits on sentence boundaries (Arabic and Latin) so a long narrative
+// becomes scannable bullet points.
+function _summaryToBullets(text) {
+  if (!text) return [];
+  // Match a chunk that ends in . ! ? . or Arabic full stop ؟  followed by a space or end.
+  const parts = String(text)
+    .replace(/\s+/g, ' ')
+    .split(/(?<=[.!?؟])\s+/)
+    .map(s => s.trim())
+    .filter(s => s.length > 1);
+  return parts.length ? parts : [String(text).trim()];
+}
+function _renderSummaryBullets(elT, summary) {
+  const bullets = _summaryToBullets(summary);
+  elT.innerHTML = `<ul class="ai-summary__list">` +
+    bullets.map(b => `<li>${escapeHtml(b)}</li>`).join('') +
+    `</ul>`;
+}
+
 function renderAISummary(d) {
   const elT = qs('#ai-summary-text');
   const elH = qs('#ai-summary-highlights');
   if (!d || !d.summary) {
     elT.textContent = t('drawer.empty'); elH.innerHTML = ''; return;
   }
-  elT.textContent = d.summary;
+  _renderSummaryBullets(elT, d.summary);
   const hl = d.highlights || [];
   elH.innerHTML = hl.map(h =>
     `<div class="ai-h ai-h--${escapeHtml(h.kind)}">${escapeHtml(h.text)}</div>`
@@ -2061,7 +2096,7 @@ function renderPatternsAISummary(d) {
   const elT = qs('#ai-patterns-summary');
   const elH = qs('#ai-patterns-highlights');
   if (!elT || !d || !d.summary) { if (elT) elT.textContent = ''; if (elH) elH.innerHTML = ''; return; }
-  elT.textContent = d.summary;
+  _renderSummaryBullets(elT, d.summary);
   const hl = d.highlights || [];
   elH.innerHTML = hl.map(h =>
     `<div class="ai-h ai-h--${escapeHtml(h.kind)}">${escapeHtml(h.text)}</div>`
@@ -2339,7 +2374,7 @@ function renderForecast(d) {
     const hi=[histY[histY.length-1], ...d.forecast.hi];
     traces.push({ x:fcX, y:hi, type:'scatter', mode:'lines', line:{ color:'rgba(38,99,75,0.20)', width:0 }, hoverinfo:'skip', showlegend:false });
     traces.push({ x:fcX, y:lo, type:'scatter', mode:'lines', line:{ color:'rgba(38,99,75,0.20)', width:0 }, fill:'tonexty', fillcolor:'rgba(38,99,75,0.10)', hoverinfo:'skip', name: LANG==='ar'?'نطاق الثقة':'Confidence band' });
-    traces.push({ name: LANG==='ar'?'متوقّع':'Forecast', x:fcX, y:fcY, type:'scatter', mode:'lines+markers', line:{ color:DGA.primary, width:2, dash:'dot' }, marker:{ size:6, color:DGA.primary }, customdata: fcY.map(v=>fmtInt(v)), hovertemplate:'<b>%{x}</b><br>%{customdata}<extra></extra>' });
+    traces.push({ name: LANG==='ar'?'متوقع':'Forecast', x:fcX, y:fcY, type:'scatter', mode:'lines+markers', line:{ color:DGA.primary, width:2, dash:'dot' }, marker:{ size:6, color:DGA.primary }, customdata: fcY.map(v=>fmtInt(v)), hovertemplate:'<b>%{x}</b><br>%{customdata}<extra></extra>' });
   }
   const allY = histY.concat(d.forecast.hi||[]);
   Plotly.newPlot('chart-forecast', traces, {
@@ -2692,7 +2727,7 @@ function renderSnapshotsTable() {
         else SnapState.selected.delete(id);
         qs('#snap-compare').disabled = SnapState.selected.size !== 2;
         qs('#snap-selection-hint').textContent = SnapState.selected.size === 0 ? '' :
-          (LANG==='ar' ? `محدّد: ${SnapState.selected.size}/2` : `selected: ${SnapState.selected.size}/2`);
+          (LANG==='ar' ? `محدد: ${SnapState.selected.size}/2` : `selected: ${SnapState.selected.size}/2`);
         // Update only the disabled-state of OTHER checkboxes — not full re-render.
         qsa('input[data-snap-check]', wrap).forEach(other => {
           const oid = parseInt(other.dataset.snapCheck, 10);
@@ -2715,7 +2750,7 @@ function renderSnapshotsTable() {
   }
   qs('#snap-compare').disabled = SnapState.selected.size !== 2;
   qs('#snap-selection-hint').textContent = SnapState.selected.size === 0 ? '' :
-    (LANG==='ar' ? `محدّد: ${SnapState.selected.size}/2` : `selected: ${SnapState.selected.size}/2`);
+    (LANG==='ar' ? `محدد: ${SnapState.selected.size}/2` : `selected: ${SnapState.selected.size}/2`);
 }
 
 async function openSnapshotDetail(id) {
@@ -2729,7 +2764,7 @@ async function openSnapshotDetail(id) {
   lines.push(`</div>`);
   const insights = (s.insights && s.insights.insights) || [];
   if (insights.length) {
-    lines.push(`<h4 style="margin-top:var(--s-3)">${LANG==='ar'?'الرؤى':'Insights'}</h4><ul>`);
+    lines.push(`<h4 style="margin-top:var(--s-3)">${LANG==='ar'?'التحليلات':'Insights'}</h4><ul>`);
     insights.forEach(it => lines.push(`<li><strong>${_esc(it.title || '')}</strong> — ${_esc(it.evidence || it.action || '')}</li>`));
     lines.push(`</ul>`);
   }

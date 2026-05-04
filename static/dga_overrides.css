@@ -257,6 +257,33 @@ textarea:focus-visible,
 }
 
 /* =========================================================================
+   v1.5.0 — bullet-style AI summary (replaces narrative paragraph)
+   ========================================================================= */
+.ai-summary__list {
+  margin: 0;
+  padding-inline-start: 1.25rem;
+  list-style: none;
+}
+.ai-summary__list li {
+  position: relative;
+  padding-inline-start: 1.1rem;
+  margin: 0 0 8px 0;
+  line-height: 1.6;
+  color: var(--ink, #1A1A1A);
+}
+.ai-summary__list li::before {
+  content: '';
+  position: absolute;
+  inset-inline-start: 0;
+  top: 0.55em;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--dga-green-500, #006C35);
+}
+.ai-summary__list li:last-child { margin-bottom: 0; }
+
+/* =========================================================================
    v1.4.0 — DGA color system, IBM Plex Sans, dark header
    ========================================================================= */
 
