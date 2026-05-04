@@ -53,7 +53,7 @@ STATIC_DIR = ROOT / "static"
 app = FastAPI(
     title="منصّة تحليل مشاركات المستفيدين — صندوق التنمية الزراعية",
     description="تحليل ذكي لمشاركات المستفيدين عبر القنوات الرقمية — معالجة محلية بالكامل.",
-    version="1.3.0",
+    version="1.3.1",
 )
 
 
@@ -1216,12 +1216,31 @@ def _export_alerts(fdf: pd.DataFrame) -> list[dict]:
     if fdf.empty:
         return []
     try:
-        adf = analytics.detect_weekly_anomalies(fdf)
+        alerts_list = analytics.detect_weekly_anomalies(fdf)
     except Exception:
         return []
-    if hasattr(adf, "to_dict"):
-        return adf.to_dict(orient="records")
-    return list(adf or [])
+    out: list[dict] = []
+    for a in alerts_list or []:
+        # AnomalyAlert is a dataclass — translate to the dict shape the
+        # Excel export module expects (title / kind / metric / evidence).
+        try:
+            week = a.week_start.strftime("%Y-%m-%d") if hasattr(a.week_start, "strftime") else str(a.week_start)
+            out.append({
+                "title":   f"{a.value} ({a.dimension})",
+                "kind":    a.severity,
+                "metric":  f"عدد={a.count} · z={a.z_score:.2f} · أسبوع {week}",
+                "evidence": a.suggested_action or "",
+            })
+        except AttributeError:
+            # Defensive: if a future change makes it dict-like, fall through.
+            if isinstance(a, dict):
+                out.append({
+                    "title":   a.get("title") or a.get("value") or "",
+                    "kind":    a.get("kind")  or a.get("severity") or "",
+                    "metric":  a.get("metric") or "",
+                    "evidence": a.get("evidence") or a.get("suggested_action") or "",
+                })
+    return out
 
 
 def _kpis_for_export(fdf: pd.DataFrame) -> dict:

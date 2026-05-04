@@ -1,5 +1,15 @@
 # Changelog
 
+## [1.3.1] — 2026-05-04 (hotfix)
+
+### Fixed
+- `/api/export/overview` 500 error — `_export_alerts` was passing
+  `AnomalyAlert` dataclass instances to the Excel export module, which
+  expected dict-shaped alerts. Now translates dataclass fields into the
+  expected `title / kind / metric / evidence` shape (matching what
+  `/api/alerts` already returns to the frontend). All four exports now
+  work end-to-end on real data.
+
 ## [1.3.0] — 2026-05-04
 
 Brand & deliverable release. Adds official ADF visual identity to the
