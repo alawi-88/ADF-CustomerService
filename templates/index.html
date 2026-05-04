@@ -24,6 +24,7 @@
     <symbol id="i-info" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><line x1="12" y1="11" x2="12" y2="16"/><line x1="12" y1="8" x2="12.01" y2="8"/></symbol>
     <symbol id="i-download" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></symbol>
     <symbol id="i-globe" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></symbol>
+    <symbol id="i-chevron-down" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></symbol>
   </defs>
 </svg>
 </head>
@@ -164,10 +165,26 @@
             <h1 class="page-head__title" data-i18n="overview.title"></h1>
             <p class="page-head__subtitle" data-i18n="overview.subtitle"></p>
           </div>
-          <button class="btn btn--ghost btn--small btn-export" data-export="overview" type="button">
-            <svg class="icon"><use href="#i-download"></use></svg>
-            <span data-i18n="action.export_xlsx"></span>
-          </button>
+          <div class="export-split">
+            <button class="btn btn--ghost btn--small btn-export btn-export-main" data-export="overview" type="button">
+              <svg class="icon"><use href="#i-download"></use></svg>
+              <span data-i18n="action.export_xlsx"></span>
+            </button>
+            <button class="btn-export-toggle" type="button" data-i18n-aria="export.menu.aria"><svg class="icon"><use href="#i-chevron-down"/></svg></button>
+            <div class="export-menu" role="menu">
+              <div class="export-menu__head" data-i18n="export.menu.head"></div>
+              <button type="button" class="export-menu__item" data-preset="current" data-i18n="export.menu.current"></button>
+              <hr>
+              <button type="button" class="export-menu__item" data-preset="7d"        data-i18n="export.menu.7d"></button>
+              <button type="button" class="export-menu__item" data-preset="30d"       data-i18n="export.menu.30d"></button>
+              <button type="button" class="export-menu__item" data-preset="90d"       data-i18n="export.menu.90d"></button>
+              <hr>
+              <button type="button" class="export-menu__item" data-preset="this_month" data-i18n="export.menu.this_month"></button>
+              <button type="button" class="export-menu__item" data-preset="last_month" data-i18n="export.menu.last_month"></button>
+              <hr>
+              <button type="button" class="export-menu__item" data-preset="all"       data-i18n="export.menu.all"></button>
+            </div>
+          </div>
         </div>
 
         <div class="grid grid--kpi section" id="kpi-grid"></div>
@@ -193,9 +210,16 @@
         </div>
 
         <div class="card section pop-card" id="pop-card" style="display:none">
-          <div class="card__head">
-            <h2 class="card__title" data-i18n="pop.title"></h2>
-            <span class="card__hint" id="pop-meta"></span>
+          <div class="card__head card__head--with-control">
+            <div>
+              <h2 class="card__title" id="pop-title" data-i18n="pop.title"></h2>
+              <span class="card__hint" id="pop-meta"></span>
+            </div>
+            <div class="pop-period" role="tablist" aria-label="Comparison period">
+              <button class="pop-period__btn is-active" data-period="week" type="button" data-i18n="pop.period.week"></button>
+              <button class="pop-period__btn" data-period="month" type="button" data-i18n="pop.period.month"></button>
+              <button class="pop-period__btn" data-period="quarter" type="button" data-i18n="pop.period.quarter"></button>
+            </div>
           </div>
           <div class="pop-grid" id="pop-grid"></div>
         </div>
@@ -263,10 +287,26 @@
             <h1 class="page-head__title" data-i18n="patterns.title"></h1>
             <p class="page-head__subtitle" data-i18n="patterns.subtitle"></p>
           </div>
-          <button class="btn btn--ghost btn--small btn-export" data-export="patterns" type="button">
-            <svg class="icon"><use href="#i-download"></use></svg>
-            <span data-i18n="action.export_xlsx"></span>
-          </button>
+          <div class="export-split">
+            <button class="btn btn--ghost btn--small btn-export btn-export-main" data-export="patterns" type="button">
+              <svg class="icon"><use href="#i-download"></use></svg>
+              <span data-i18n="action.export_xlsx"></span>
+            </button>
+            <button class="btn-export-toggle" type="button"><svg class="icon"><use href="#i-chevron-down"/></svg></button>
+            <div class="export-menu" role="menu">
+              <div class="export-menu__head" data-i18n="export.menu.head"></div>
+              <button type="button" class="export-menu__item" data-preset="current" data-i18n="export.menu.current"></button>
+              <hr>
+              <button type="button" class="export-menu__item" data-preset="7d"        data-i18n="export.menu.7d"></button>
+              <button type="button" class="export-menu__item" data-preset="30d"       data-i18n="export.menu.30d"></button>
+              <button type="button" class="export-menu__item" data-preset="90d"       data-i18n="export.menu.90d"></button>
+              <hr>
+              <button type="button" class="export-menu__item" data-preset="this_month" data-i18n="export.menu.this_month"></button>
+              <button type="button" class="export-menu__item" data-preset="last_month" data-i18n="export.menu.last_month"></button>
+              <hr>
+              <button type="button" class="export-menu__item" data-preset="all"       data-i18n="export.menu.all"></button>
+            </div>
+          </div>
         </div>
 
         <div class="card section ai-card">
@@ -384,10 +424,26 @@
             <h1 class="page-head__title" data-i18n="actions.title"></h1>
             <p class="page-head__subtitle" data-i18n="actions.subtitle"></p>
           </div>
-          <button class="btn btn--ghost btn--small btn-export" data-export="tickets" type="button">
-            <svg class="icon"><use href="#i-download"></use></svg>
-            <span data-i18n="action.export_xlsx"></span>
-          </button>
+          <div class="export-split">
+            <button class="btn btn--ghost btn--small btn-export btn-export-main" data-export="tickets" type="button">
+              <svg class="icon"><use href="#i-download"></use></svg>
+              <span data-i18n="action.export_xlsx"></span>
+            </button>
+            <button class="btn-export-toggle" type="button"><svg class="icon"><use href="#i-chevron-down"/></svg></button>
+            <div class="export-menu" role="menu">
+              <div class="export-menu__head" data-i18n="export.menu.head"></div>
+              <button type="button" class="export-menu__item" data-preset="current" data-i18n="export.menu.current"></button>
+              <hr>
+              <button type="button" class="export-menu__item" data-preset="7d"        data-i18n="export.menu.7d"></button>
+              <button type="button" class="export-menu__item" data-preset="30d"       data-i18n="export.menu.30d"></button>
+              <button type="button" class="export-menu__item" data-preset="90d"       data-i18n="export.menu.90d"></button>
+              <hr>
+              <button type="button" class="export-menu__item" data-preset="this_month" data-i18n="export.menu.this_month"></button>
+              <button type="button" class="export-menu__item" data-preset="last_month" data-i18n="export.menu.last_month"></button>
+              <hr>
+              <button type="button" class="export-menu__item" data-preset="all"       data-i18n="export.menu.all"></button>
+            </div>
+          </div>
         </div>
 
         <div class="toolbar">
@@ -501,10 +557,26 @@
             <p class="page-head__subtitle" data-i18n="snap.subtitle"></p>
           </div>
           <div class="page-head__actions">
-            <button class="btn btn--ghost btn--small btn-export" data-export="recommendations" type="button">
-              <svg class="icon"><use href="#i-download"></use></svg>
-              <span data-i18n="action.export_xlsx"></span>
-            </button>
+            <div class="export-split">
+              <button class="btn btn--ghost btn--small btn-export btn-export-main" data-export="recommendations" type="button">
+                <svg class="icon"><use href="#i-download"></use></svg>
+                <span data-i18n="action.export_xlsx"></span>
+              </button>
+              <button class="btn-export-toggle" type="button"><svg class="icon"><use href="#i-chevron-down"/></svg></button>
+              <div class="export-menu" role="menu">
+                <div class="export-menu__head" data-i18n="export.menu.head"></div>
+                <button type="button" class="export-menu__item" data-preset="current" data-i18n="export.menu.current"></button>
+                <hr>
+                <button type="button" class="export-menu__item" data-preset="7d"        data-i18n="export.menu.7d"></button>
+                <button type="button" class="export-menu__item" data-preset="30d"       data-i18n="export.menu.30d"></button>
+                <button type="button" class="export-menu__item" data-preset="90d"       data-i18n="export.menu.90d"></button>
+                <hr>
+                <button type="button" class="export-menu__item" data-preset="this_month" data-i18n="export.menu.this_month"></button>
+                <button type="button" class="export-menu__item" data-preset="last_month" data-i18n="export.menu.last_month"></button>
+                <hr>
+                <button type="button" class="export-menu__item" data-preset="all"       data-i18n="export.menu.all"></button>
+              </div>
+            </div>
             <button id="snap-create" class="btn btn--primary" data-i18n="snap.create"></button>
           </div>
         </div>
@@ -718,9 +790,24 @@ const I18N = {
     'linked.refine':'تنقيح بالذكاء الاصطناعيّ',
     'linked.refining':'جارٍ التحليل…',
     'linked.rationale':'سبب التحليل',
-    'pop.title':'مقارنة آخر أسبوعين بالأسبوعين السابقَين',
+    'pop.title':'مقارنة الفترتَين',
+    'pop.title.week':'مقارنة آخر ٧ أيّام بالأيّام السابقة',
+    'pop.title.month':'مقارنة آخر ٣٠ يومًا بالفترة المماثلة',
+    'pop.title.quarter':'مقارنة آخر ٩٠ يومًا بالفترة المماثلة',
+    'pop.period.week':'أسبوعيّ',
+    'pop.period.month':'شهريّ',
+    'pop.period.quarter':'ربعيّ',
     'pop.total':'إجماليّ الطلبات','pop.complaints':'الشكاوى','pop.high':'الخطورة العالية',
     'pop.empty':'لا تتوفّر بيانات كافية للمقارنة.',
+    'export.menu.head':'فترة التصدير',
+    'export.menu.current':'العرض الحاليّ (مع الفلاتر)',
+    'export.menu.7d':'آخر ٧ أيّام',
+    'export.menu.30d':'آخر ٣٠ يومًا',
+    'export.menu.90d':'آخر ٩٠ يومًا',
+    'export.menu.this_month':'هذا الشهر',
+    'export.menu.last_month':'الشهر الماضي',
+    'export.menu.all':'كامل البيانات',
+    'export.menu.aria':'خيارات التصدير حسب الفترة',
     'insight.kind.anomaly':'تنبيه','insight.kind.risk':'خطر','insight.kind.momentum':'اتّجاه',
     'insight.kind.complaints':'شكاوى','insight.kind.opportunity':'فرصة','insight.kind.recurring':'تكرار',
     'insight.examples':'أمثلة من البيانات','insight.see_records':'عرض السجلّات',
@@ -848,9 +935,24 @@ const I18N = {
     'linked.refine':'Refine with AI',
     'linked.refining':'Analysing…',
     'linked.rationale':'Why',
-    'pop.title':'Last two weeks vs the prior two',
+    'pop.title':'Period comparison',
+    'pop.title.week':'Last 7 days vs prior 7',
+    'pop.title.month':'Last 30 days vs prior 30',
+    'pop.title.quarter':'Last 90 days vs prior 90',
+    'pop.period.week':'Weekly',
+    'pop.period.month':'Monthly',
+    'pop.period.quarter':'Quarterly',
     'pop.total':'Total requests','pop.complaints':'Complaints','pop.high':'High severity',
     'pop.empty':'Not enough data to compare',
+    'export.menu.head':'Export period',
+    'export.menu.current':'Current view (with filters)',
+    'export.menu.7d':'Last 7 days',
+    'export.menu.30d':'Last 30 days',
+    'export.menu.90d':'Last 90 days',
+    'export.menu.this_month':'This month',
+    'export.menu.last_month':'Last month',
+    'export.menu.all':'All data',
+    'export.menu.aria':'Export period options',
     'insight.kind.anomaly':'Alert','insight.kind.risk':'Risk','insight.kind.momentum':'Trend',
     'insight.kind.complaints':'Complaints','insight.kind.opportunity':'Opportunity','insight.kind.recurring':'Recurring',
     'insight.examples':'Examples from the data','insight.see_records':'Open records',
@@ -1041,12 +1143,132 @@ async function downloadXlsx(kind, btn) {
   }
 }
 
+// Keep this listener for the main export button — when nothing in the menu
+// is chosen, clicking the icon-and-label part exports the dashboard's
+// current view (the historical v1.3.0 behavior).
 document.addEventListener('click', (ev) => {
-  const btn = ev.target.closest('.btn-export');
+  const btn = ev.target.closest('.btn-export-main');
   if (!btn) return;
   const kind = btn.dataset.export;
   if (!kind) return;
   downloadXlsx(kind, btn);
+});
+
+// v1.4.0 — period preset menu next to each export split button.
+function presetRange(preset) {
+  // Returns { from, to } in YYYY-MM-DD or null for "all" / "current".
+  const today = new Date();
+  const iso = (d) => d.toISOString().slice(0, 10);
+  const back = (n) => {
+    const x = new Date(today); x.setDate(x.getDate() - n + 1); return x;
+  };
+  if (preset === 'current') return null;
+  if (preset === 'all') return { from: '', to: '' };
+  if (preset === '7d')   return { from: iso(back(7)),   to: iso(today) };
+  if (preset === '30d')  return { from: iso(back(30)),  to: iso(today) };
+  if (preset === '90d')  return { from: iso(back(90)),  to: iso(today) };
+  if (preset === 'this_month') {
+    const start = new Date(today.getFullYear(), today.getMonth(), 1);
+    return { from: iso(start), to: iso(today) };
+  }
+  if (preset === 'last_month') {
+    const start = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+    const end   = new Date(today.getFullYear(), today.getMonth(), 0);
+    return { from: iso(start), to: iso(end) };
+  }
+  return null;
+}
+
+async function downloadXlsxWithPreset(kind, preset, btn) {
+  const range = presetRange(preset);
+  if (range === null) {
+    // "current" — same behavior as the historical export click.
+    return downloadXlsx(kind, btn);
+  }
+  const params = new URLSearchParams();
+  params.set('lang', LANG);
+  if (range.from) params.set('from', range.from);
+  if (range.to)   params.set('to',   range.to);
+  // Carry forward category/severity selections, but NOT the from/to —
+  // because the user has explicitly chosen a different range.
+  state.filters.categories.forEach(c => params.append('category', c));
+  state.filters.severities.forEach(s => params.append('severity', s));
+  const url = `/api/export/${encodeURIComponent(kind)}?${params.toString()}`;
+  const orig = btn ? btn.innerHTML : null;
+  if (btn) {
+    btn.disabled = true;
+    btn.innerHTML = `<svg class="icon"><use href="#i-refresh"/></svg><span>${t('action.exporting')}</span>`;
+  }
+  try {
+    const r = await fetch(url);
+    if (!r.ok) throw new Error(`export ${kind} preset=${preset} → ${r.status}`);
+    let filename = `ADF-${kind}-${preset}.xlsx`;
+    const cd = r.headers.get('content-disposition') || '';
+    const m = cd.match(/filename="([^"]+)"/);
+    if (m) filename = m[1];
+    const blob = await r.blob();
+    const a = document.createElement('a');
+    const objUrl = URL.createObjectURL(blob);
+    a.href = objUrl;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(objUrl);
+  } catch (e) {
+    console.error('export with preset failed:', e);
+    alert(t('action.export_failed'));
+  } finally {
+    if (btn && orig != null) {
+      btn.disabled = false;
+      btn.innerHTML = orig;
+    }
+  }
+}
+
+// Click on the chevron toggle: open the preset menu next to that button.
+document.addEventListener('click', (ev) => {
+  const toggle = ev.target.closest('.btn-export-toggle');
+  if (toggle) {
+    ev.preventDefault();
+    const wrap = toggle.closest('.export-split');
+    if (!wrap) return;
+    // Close any other open menus first.
+    qsa('.export-menu.is-open').forEach(m => {
+      if (m !== wrap.querySelector('.export-menu')) m.classList.remove('is-open');
+    });
+    const menu = wrap.querySelector('.export-menu');
+    if (menu) menu.classList.toggle('is-open');
+    return;
+  }
+  // Click on a preset item: do the export and close the menu.
+  const item = ev.target.closest('.export-menu__item');
+  if (item) {
+    ev.preventDefault();
+    const wrap = item.closest('.export-split');
+    const main = wrap?.querySelector('.btn-export-main');
+    const kind = main?.dataset.export;
+    const preset = item.dataset.preset;
+    if (kind && preset) {
+      downloadXlsxWithPreset(kind, preset, main);
+    }
+    item.closest('.export-menu')?.classList.remove('is-open');
+    return;
+  }
+  // Click anywhere else — close any open menu.
+  if (!ev.target.closest('.export-menu')) {
+    qsa('.export-menu.is-open').forEach(m => m.classList.remove('is-open'));
+  }
+});
+
+// v1.4.0 — period comparison segmented control.
+document.addEventListener('click', (ev) => {
+  const b = ev.target.closest('.pop-period__btn');
+  if (!b) return;
+  popPeriod = b.dataset.period || 'week';
+  localStorage.setItem('adf.pop.period', popPeriod);
+  qsa('.pop-period__btn').forEach(x => x.classList.toggle('is-active', x === b));
+  loadPeriodComparison();
 });
 
 /* ====== Bootstrap ===================================================== */
@@ -1972,13 +2194,26 @@ function renderInsights(d) {
   }));
 }
 
+// v1.4.0 — period comparison can be weekly/monthly/quarterly
+const POP_PERIODS = { week: 7, month: 30, quarter: 90 };
+let popPeriod = localStorage.getItem('adf.pop.period') || 'week';
+
 async function loadPeriodComparison() {
   try {
-    const d = await fetch('/api/period_comparison?days=14').then(r => r.json());
+    const days = POP_PERIODS[popPeriod] || 7;
+    const d = await fetch(`/api/period_comparison?days=${days}`).then(r => r.json());
     const card = qs('#pop-card'); if (!card) return;
     if (!d || !d.current || !d.current.total) { card.style.display = 'none'; return; }
     card.style.display = '';
+    // Title reflects the chosen period.
+    const titleKey = `pop.title.${popPeriod}`;
+    const titleEl = qs('#pop-title');
+    if (titleEl) titleEl.textContent = t(titleKey);
     qs('#pop-meta').textContent = `${fmtDate(d.current_start)} ${fwdArrow()} ${fmtDate(d.current_end)}`;
+    // Sync the segmented control's active state.
+    qsa('.pop-period__btn').forEach(b => {
+      b.classList.toggle('is-active', b.dataset.period === popPeriod);
+    });
     const cells = [
       { key:'total',      label:t('pop.total'),      cur:d.current.total,      prev:d.previous.total,      delta:d.delta_pct.total,      good:'down' },
       { key:'complaints', label:t('pop.complaints'), cur:d.current.complaints, prev:d.previous.complaints, delta:d.delta_pct.complaints, good:'down' },
