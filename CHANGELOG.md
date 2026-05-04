@@ -1,5 +1,67 @@
 # Changelog
 
+## [1.3.0] — 2026-05-04
+
+Brand & deliverable release. Adds official ADF visual identity to the
+dashboard, polishes Arabic copy across the entire UI to match the
+adf.gov.sa formal-public-sector tone, and gives every primary report
+surface a one-click Excel export with native Excel charts.
+
+### Added
+- **ADF brand identity** — `static/adf-logo-header.svg` replaces the
+  topbar wordmark; new `static/adf-logo-footer.svg` anchors a brand
+  footer that runs across every page. Header logo collapses gracefully
+  on mobile; the footer stacks below 720px.
+- **Excel export endpoints** — four new GET routes return formatted
+  `.xlsx` workbooks with native Excel charts (no embedded PNGs):
+  - `GET /api/export/overview` — KPI block, weekly volume (line chart),
+    by-category (bar), severity split (doughnut), early-warning alerts.
+  - `GET /api/export/patterns` — weekly volume, categories, severity,
+    severity-by-week, rising topics, top recurring topics, weekly-by-
+    category — each on its own sheet with a chart.
+  - `GET /api/export/recommendations[?snapshot_id=…]` — current snapshot
+    (or named one) with kind/title/metric/evidence/action/severity, plus
+    an "insights by kind" doughnut.
+  - `GET /api/export/tickets` — filtered ticket list with auto-filter and
+    frozen header, plus a severity distribution chart.
+  Every workbook opens with a cover sheet (title, generated-at,
+  applied-filter summary, headline KPIs). All sheets are RTL-aware when
+  `lang=ar`. Cover and chart titles localised AR/EN.
+- **Frontend export buttons** on the four matching pages
+  (Overview, Patterns & Trends, Suggested actions, Recommendations log).
+  Each button submits the dashboard's current filter state, downloads
+  the workbook, and uses the icon `#i-download`.
+- **Five new i18n keys** in both AR and EN: `action.export_xlsx`,
+  `action.exporting`, `action.export_failed`, `footer.org`, `footer.app`.
+
+### Changed
+- **Full Arabic UI revision** — every Arabic string in the i18n table
+  has been polished to align with the adf.gov.sa formal-public-sector
+  voice: consistent diacritics, Arabic-comma punctuation, government-
+  sector vocabulary, and gender-neutral phrasing. ~130 keys touched.
+  The English block is left unchanged except for the new keys.
+- **App title and FastAPI metadata** updated to surface the ADF brand:
+  `منصّة تحليل مشاركات المستفيدين — صندوق التنمية الزراعية`, version
+  bumped to `1.3.0`.
+- **CSS overlay** in `static/dga_overrides.css` extended with a
+  `v1.3.0` block: `.topbar__logo*`, `.app-footer*`, `.page-head__actions`,
+  `.btn-export`. Mobile breakpoints handle small screens.
+
+### Dependencies
+- Added `xlsxwriter>=3.2,<4.0` for native Excel chart generation.
+  `openpyxl` remains for ingest-side reading.
+
+### Verified
+- All four export endpoints register on app boot and return their
+  expected media type (`application/vnd.openxmlformats-…`). The
+  recommendations export was end-to-end tested against an empty
+  dataset and produced a valid Excel 2007+ workbook with Arabic
+  sheet names («الغلاف», «التوصيات»). Overview / patterns / tickets
+  exports return 503 only when the dataset itself is unloaded —
+  identical to existing data-dependent endpoints — and produce full
+  workbooks otherwise.
+- Python `py_compile` clean on `src/excel_export.py` and `src/app.py`.
+
 ## [1.2.2] — 2026-04-29 (final tested release)
 
 Hardening release. No new features beyond what landed in v1.2.1, but
