@@ -257,6 +257,283 @@ textarea:focus-visible,
 }
 
 /* =========================================================================
+   v1.4.0 — DGA color system, IBM Plex Sans, dark header
+   ========================================================================= */
+
+/* Pull IBM Plex Sans + IBM Plex Sans Arabic. We keep both — Latin script
+   uses Plex Sans, Arabic script uses Plex Sans Arabic, the standard pair
+   used by adf.gov.sa and DGA-compliant Saudi government products.        */
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Sans+Arabic:wght@300;400;500;600;700&display=swap');
+
+:root {
+  /* ---------- Type — IBM Plex Sans family ----------------------------- */
+  --font-arabic: 'IBM Plex Sans Arabic', 'IBM Plex Sans', system-ui, sans-serif;
+  --font-num:    'IBM Plex Sans', 'IBM Plex Sans Arabic', system-ui, sans-serif;
+
+  /* ---------- DGA color system ---------------------------------------- */
+  /* Primary green ramp (design.dga.gov.sa).                              */
+  --dga-green-50:  #E5F2EB;
+  --dga-green-100: #B3DBC2;
+  --dga-green-200: #80C499;
+  --dga-green-300: #4DAD70;
+  --dga-green-400: #269E55;
+  --dga-green-500: #006C35;   /* DGA primary */
+  --dga-green-600: #005628;
+  --dga-green-700: #004520;
+  --dga-green-800: #003318;
+  --dga-green-900: #002211;
+
+  /* Secondary navy.                                                     */
+  --dga-blue-50:  #E5EDF4;
+  --dga-blue-100: #B3CADD;
+  --dga-blue-300: #4D86B4;
+  --dga-blue-500: #00538C;   /* DGA secondary */
+  --dga-blue-600: #00426F;
+
+  /* Neutrals (warm grays).                                              */
+  --dga-n-0:   #FFFFFF;
+  --dga-n-50:  #F7F7F8;
+  --dga-n-100: #EDEDEF;
+  --dga-n-200: #DCDDE0;
+  --dga-n-300: #C9CACE;
+  --dga-n-400: #A2A4AB;
+  --dga-n-500: #6B6E78;
+  --dga-n-700: #3F4148;
+  --dga-n-900: #1A1B1E;
+
+  /* Semantic.                                                           */
+  --dga-success:   #008543;
+  --dga-warning:   #B07800;
+  --dga-error:     #B0040F;
+  --dga-info:      #00538C;
+
+  /* Header surface — dark green for the white-text logo.                */
+  --header-bg:        var(--dga-green-800);   /* #003318 */
+  --header-bg-soft:   var(--dga-green-700);
+  --header-fg:        #FFFFFF;
+  --header-fg-muted:  rgba(255, 255, 255, 0.74);
+  --header-border:    rgba(255, 255, 255, 0.12);
+}
+
+/* Apply Plex to everything (including the .lang-en path that previously
+   targeted Plex Sans only — now both languages flow through one stack). */
+html, body, .topbar, .sidebar, .main, .card, button, input, select, textarea,
+body.lang-en, body.lang-en h1, body.lang-en h2, body.lang-en h3, body.lang-en p,
+body.lang-en .kpi__label, body.lang-en .field__label {
+  font-family: var(--font-arabic);
+  font-feature-settings: "ss01", "tnum";
+}
+
+/* Numeric tabulars stay tabular under Plex.                              */
+.kpi__value, .num, [class*="num-"], .id-tag {
+  font-feature-settings: "tnum";
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---------- Dark topbar -------------------------------------------------- */
+.topbar {
+  background: var(--header-bg) !important;
+  color: var(--header-fg) !important;
+  border-bottom: 1px solid var(--header-border) !important;
+  box-shadow: 0 2px 8px rgba(0, 51, 24, 0.18);
+}
+.topbar a,
+.topbar button:not(.btn--primary) {
+  color: var(--header-fg) !important;
+}
+.topbar .topbar__wordmark-ar {
+  color: var(--header-fg) !important;
+}
+.topbar .topbar__wordmark-sub {
+  color: var(--header-fg-muted) !important;
+}
+.topbar .btn--ghost {
+  background: transparent;
+  color: var(--header-fg) !important;
+  border: 1px solid var(--header-border);
+}
+.topbar .btn--ghost:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.28);
+}
+.topbar .btn--primary {
+  background: var(--dga-green-500) !important;
+  color: #FFFFFF !important;
+  border: 1px solid var(--dga-green-400);
+}
+.topbar .btn--primary:hover {
+  background: var(--dga-green-400) !important;
+  border-color: var(--dga-green-300);
+}
+.topbar .pill {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--header-fg) !important;
+  border: 1px solid var(--header-border);
+}
+.topbar .pill__dot {
+  background: var(--dga-green-300);
+}
+.topbar select.actor-select {
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--header-fg) !important;
+  border: 1px solid var(--header-border);
+}
+.topbar select.actor-select option {
+  background: var(--dga-n-900);
+  color: var(--header-fg);
+}
+.topbar__logo-link:hover,
+.topbar__logo-link:focus-visible {
+  background-color: rgba(255, 255, 255, 0.06) !important;
+  outline: none;
+}
+.topbar__logo-link:focus-visible {
+  outline: 2px solid var(--dga-green-300);
+  outline-offset: 2px;
+}
+
+/* ---------- Period comparison segmented control ------------------------- */
+.pop-period {
+  display: inline-flex;
+  align-items: center;
+  gap: 0;
+  background: var(--dga-n-100);
+  border: 1px solid var(--dga-n-200);
+  border-radius: 999px;
+  padding: 2px;
+}
+.pop-period__btn {
+  border: 0;
+  background: transparent;
+  color: var(--dga-n-700);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 6px 14px;
+  border-radius: 999px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background-color 120ms ease, color 120ms ease;
+}
+.pop-period__btn:hover:not(.is-active) {
+  color: var(--dga-green-700);
+  background: var(--dga-green-50);
+}
+.pop-period__btn.is-active {
+  background: var(--dga-green-500);
+  color: #FFFFFF;
+}
+.pop-period__btn:focus-visible {
+  outline: 2px solid var(--dga-green-500);
+  outline-offset: 2px;
+}
+
+/* Card head holds title + period selector on the same row. */
+.card__head--with-control {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-3, 12px);
+  flex-wrap: wrap;
+  margin-bottom: var(--s-3, 12px);
+}
+
+/* ---------- Export split button ---------------------------------------- */
+.export-split {
+  position: relative;
+  display: inline-flex;
+}
+.export-split .btn-export-main {
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
+}
+[dir="rtl"] .export-split .btn-export-main {
+  border-radius: var(--radius-sm, 6px) 0 0 var(--radius-sm, 6px);
+}
+[dir="ltr"] .export-split .btn-export-main {
+  border-radius: var(--radius-sm, 6px) 0 0 var(--radius-sm, 6px);
+}
+.export-split .btn-export-toggle {
+  width: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--dga-green-500);
+  border-inline-start: 0;
+  background: white;
+  color: var(--dga-green-500);
+  cursor: pointer;
+  border-radius: 0 var(--radius-sm, 6px) var(--radius-sm, 6px) 0;
+  font-weight: 600;
+  transition: background-color 120ms ease, color 120ms ease;
+}
+[dir="rtl"] .export-split .btn-export-toggle {
+  border-radius: 0 var(--radius-sm, 6px) var(--radius-sm, 6px) 0;
+}
+.export-split .btn-export-toggle:hover {
+  background: var(--dga-green-500);
+  color: #FFFFFF;
+}
+.export-split .btn-export-toggle:focus-visible {
+  outline: 2px solid var(--dga-green-500);
+  outline-offset: 2px;
+}
+.export-split .btn-export-toggle .icon {
+  width: 12px;
+  height: 12px;
+}
+
+.export-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  inset-inline-end: 0;
+  min-width: 240px;
+  background: white;
+  border: 1px solid var(--dga-n-200);
+  border-radius: var(--radius-md, 10px);
+  box-shadow: 0 8px 24px rgba(0, 51, 24, 0.12);
+  padding: 6px;
+  z-index: 50;
+  display: none;
+}
+.export-menu.is-open { display: block; }
+.export-menu__head {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: none;
+  color: var(--dga-n-500);
+  padding: 6px 10px;
+  letter-spacing: 0.02em;
+}
+.export-menu__item {
+  display: block;
+  width: 100%;
+  text-align: start;
+  padding: 8px 10px;
+  border: 0;
+  background: transparent;
+  border-radius: var(--radius-sm, 6px);
+  font: inherit;
+  color: var(--dga-n-900);
+  cursor: pointer;
+}
+.export-menu__item:hover,
+.export-menu__item:focus-visible {
+  background: var(--dga-green-50);
+  color: var(--dga-green-700);
+  outline: none;
+}
+.export-menu__item.is-active {
+  background: var(--dga-green-500);
+  color: #FFFFFF;
+}
+.export-menu hr {
+  border: 0;
+  border-top: 1px solid var(--dga-n-100);
+  margin: 6px 4px;
+}
+
+/* =========================================================================
    v1.3.0 — ADF brand logos (header + footer) and Excel export button
    ========================================================================= */
 
