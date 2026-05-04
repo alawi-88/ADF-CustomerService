@@ -255,3 +255,152 @@ textarea:focus-visible,
     flex: 1 1 100%;
   }
 }
+
+/* =========================================================================
+   v1.3.0 — ADF brand logos (header + footer) and Excel export button
+   ========================================================================= */
+
+/* --- Header logo ---------------------------------------------------------- */
+.topbar__brand {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3, 12px);
+  min-width: 0;
+}
+.topbar__logo-link {
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+  border-radius: 6px;
+  padding: 4px 6px;
+  transition: background-color 120ms ease;
+}
+.topbar__logo-link:hover,
+.topbar__logo-link:focus-visible {
+  background-color: rgba(0, 108, 53, 0.06);
+  outline: none;
+}
+.topbar__logo-link:focus-visible {
+  outline: 2px solid var(--color-primary, #006C35);
+  outline-offset: 2px;
+}
+.topbar__logo {
+  display: block;
+  height: 44px;
+  width: auto;
+  max-width: 220px;
+}
+@media (max-width: 720px) {
+  .topbar__logo {
+    height: 36px;
+    max-width: 160px;
+  }
+  .topbar__wordmark {
+    display: none;
+  }
+}
+@media (max-width: 480px) {
+  .topbar__logo {
+    height: 30px;
+    max-width: 130px;
+  }
+}
+
+/* --- Footer --------------------------------------------------------------- */
+.app-footer {
+  border-top: 1px solid var(--ink-line, #D6D9DC);
+  background: linear-gradient(to bottom,
+                              rgba(0, 108, 53, 0.03),
+                              rgba(0, 108, 53, 0.06));
+  padding: var(--s-5, 24px) var(--s-6, 32px);
+  margin-top: var(--s-6, 32px);
+}
+.app-footer__inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-4, 16px);
+  max-width: 1400px;
+  margin: 0 auto;
+  flex-wrap: wrap;
+}
+.app-footer__logo {
+  display: block;
+  height: 56px;
+  width: auto;
+  max-width: 280px;
+  flex-shrink: 0;
+}
+.app-footer__meta {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  text-align: end;
+  min-width: 0;
+}
+.app-footer__line {
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--color-primary, #006C35);
+  line-height: 1.4;
+}
+.app-footer__line--muted {
+  font-weight: 400;
+  font-size: 12px;
+  color: var(--ink-muted, #5C6770);
+}
+@media (max-width: 720px) {
+  .app-footer__inner {
+    flex-direction: column;
+    text-align: center;
+  }
+  .app-footer__meta {
+    text-align: center;
+  }
+  .app-footer__logo {
+    height: 44px;
+    max-width: 220px;
+  }
+}
+
+/* --- Export button (page-head action) ------------------------------------ */
+.page-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--s-3, 12px);
+  flex-wrap: wrap;
+}
+.page-head__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2, 8px);
+  flex-shrink: 0;
+}
+.btn-export {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid var(--color-primary, #006C35);
+  color: var(--color-primary, #006C35);
+  background-color: white;
+  font-weight: 600;
+  white-space: nowrap;
+  transition: background-color 120ms ease, color 120ms ease;
+}
+.btn-export:hover:not(:disabled) {
+  background-color: var(--color-primary, #006C35);
+  color: white;
+}
+.btn-export:focus-visible {
+  outline: 2px solid var(--color-primary, #006C35);
+  outline-offset: 2px;
+}
+.btn-export:disabled {
+  opacity: 0.6;
+  cursor: progress;
+}
+.btn-export .icon {
+  width: 16px;
+  height: 16px;
+}

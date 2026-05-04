@@ -34,6 +34,9 @@
 
   <header class="topbar">
     <div class="topbar__brand">
+      <a class="topbar__logo-link" href="/" aria-label="صندوق التنمية الزراعية">
+        <img src="/static/adf-logo-header.svg" alt="صندوق التنمية الزراعية" class="topbar__logo">
+      </a>
       <div class="topbar__wordmark">
         <span class="topbar__wordmark-ar" data-i18n="app.title"></span>
         <span class="topbar__wordmark-sub" data-i18n="app.subtitle"></span>
@@ -161,6 +164,10 @@
             <h1 class="page-head__title" data-i18n="overview.title"></h1>
             <p class="page-head__subtitle" data-i18n="overview.subtitle"></p>
           </div>
+          <button class="btn btn--ghost btn--small btn-export" data-export="overview" type="button">
+            <svg class="icon"><use href="#i-download"></use></svg>
+            <span data-i18n="action.export_xlsx"></span>
+          </button>
         </div>
 
         <div class="grid grid--kpi section" id="kpi-grid"></div>
@@ -256,6 +263,10 @@
             <h1 class="page-head__title" data-i18n="patterns.title"></h1>
             <p class="page-head__subtitle" data-i18n="patterns.subtitle"></p>
           </div>
+          <button class="btn btn--ghost btn--small btn-export" data-export="patterns" type="button">
+            <svg class="icon"><use href="#i-download"></use></svg>
+            <span data-i18n="action.export_xlsx"></span>
+          </button>
         </div>
 
         <div class="card section ai-card">
@@ -373,6 +384,10 @@
             <h1 class="page-head__title" data-i18n="actions.title"></h1>
             <p class="page-head__subtitle" data-i18n="actions.subtitle"></p>
           </div>
+          <button class="btn btn--ghost btn--small btn-export" data-export="tickets" type="button">
+            <svg class="icon"><use href="#i-download"></use></svg>
+            <span data-i18n="action.export_xlsx"></span>
+          </button>
         </div>
 
         <div class="toolbar">
@@ -485,7 +500,13 @@
             <h1 class="page-head__title" data-i18n="snap.title"></h1>
             <p class="page-head__subtitle" data-i18n="snap.subtitle"></p>
           </div>
-          <button id="snap-create" class="btn btn--primary" data-i18n="snap.create"></button>
+          <div class="page-head__actions">
+            <button class="btn btn--ghost btn--small btn-export" data-export="recommendations" type="button">
+              <svg class="icon"><use href="#i-download"></use></svg>
+              <span data-i18n="action.export_xlsx"></span>
+            </button>
+            <button id="snap-create" class="btn btn--primary" data-i18n="snap.create"></button>
+          </div>
         </div>
 
         <div class="card section">
@@ -507,6 +528,16 @@
 
     </main>
   </div>
+
+  <footer class="app-footer">
+    <div class="app-footer__inner">
+      <img src="/static/adf-logo-footer.svg" alt="صندوق التنمية الزراعية" class="app-footer__logo">
+      <div class="app-footer__meta">
+        <span class="app-footer__line" data-i18n="footer.org"></span>
+        <span class="app-footer__line app-footer__line--muted" data-i18n="footer.app"></span>
+      </div>
+    </div>
+  </footer>
 </div>
 
 <!-- Ticket drawer (case management) -->
@@ -579,135 +610,145 @@
 /* ====== i18n =========================================================== */
 const I18N = {
   ar: {
-    'app.title':'منصة تحليل مشاركات المستفيدين',
-    'app.subtitle':'تحليل ذكي لمشاركات المستفيدين بالقنوات الرقمية',
+    'app.title':'منصّة تحليل مشاركات المستفيدين',
+    'app.subtitle':'تحليل ذكيّ لمشاركات مستفيدي صندوق التنمية الزراعية عبر القنوات الرقميّة',
     'action.upload':'رفع ملف','action.reprocess':'إعادة المعالجة',
     'action.export':'تصدير','action.cancel':'إلغاء',
-    'status.loading':'جاري التحميل','status.engine':'محرّك التحليل',
-    'nav.title':'الأقسام','nav.overview':'نظرة عامة','nav.patterns':'الأنماط والاتجاهات',
-    'nav.alerts':'الإنذار المبكر','nav.actions':'الإجراءات المقترحة','nav.qa':'استعلام حر',
+    'action.export_xlsx':'تصدير إلى إكسل',
+    'action.exporting':'جارٍ التصدير…',
+    'action.export_failed':'تعذّر إنشاء الملف، يُرجى المحاولة مرّة أخرى.',
+    'footer.org':'صندوق التنمية الزراعيّة',
+    'footer.app':'منصّة تحليل مشاركات المستفيدين — جميع الحقوق محفوظة',
+    'status.loading':'جارٍ التحميل','status.engine':'محرّك التحليل',
+    'nav.title':'الأقسام','nav.overview':'نظرة عامّة','nav.patterns':'الأنماط والاتّجاهات',
+    'nav.alerts':'الإنذار المبكّر','nav.actions':'الإجراءات المقترحة','nav.qa':'استعلام مباشر',
     'nav.data':'إدارة البيانات',
-    'nav.snapshots':'سجل التوصيات',
-    'snap.title':'سجل التوصيات','snap.subtitle':'سجل أرشيفي لكل توصية أصدرها النظام — مع فلاترها، النموذج، إصدار الـ prompt، ومن أقفلها.',
-    'snap.create':'إنشاء لقطة الآن','snap.compare':'مقارنة المحدّدتين','snap.lock':'إقفال للأرشفة','snap.locked':'مقفلة','snap.unlocked':'مفتوحة','snap.no_runs':'لا توجد لقطات بعد. ارفع ملفاً جديداً أو اضغط زر إنشاء لقطة.',
-    'snap.col.id':'#','snap.col.created':'التاريخ','snap.col.trigger':'المصدر','snap.col.source':'الملف','snap.col.rows':'العدد','snap.col.provider':'المزوّد','snap.col.lang':'اللغة','snap.col.locked':'الحالة','snap.col.actions':'إجراءات',
-    'snap.diff.title':'الفرق بين اللقطتين','snap.diff.kpi':'مؤشّرات الأداء','snap.diff.added':'رؤى جديدة','snap.diff.removed':'رؤى أُزيلت','snap.diff.severity':'تذاكر تغيّرت خطورتها',
-    'snap.lock.prompt':'ملاحظة الإدارة (اختياري):',
-    'snap.trigger.upload':'رفع','snap.trigger.manual':'يدوي','snap.trigger.scheduled':'مجدول',
+    'nav.snapshots':'سجلّ التوصيات',
+    'snap.title':'سجلّ التوصيات','snap.subtitle':'أرشيف موثَّق لكلّ مجموعة توصيات أصدرها النظام، يتضمّن عوامل التصفية المُطبَّقة، والنموذج المستخدَم، وإصدار النصّ التوجيهيّ، وبيانات المسؤول الذي قام بإقفال اللقطة.',
+    'snap.create':'إنشاء لقطة جديدة','snap.compare':'مقارنة اللقطتَين المحدَّدتَين','snap.lock':'إقفال للأرشفة','snap.locked':'مقفلة','snap.unlocked':'مفتوحة','snap.no_runs':'لا توجد لقطات حتّى الآن. يمكنك رفع ملف جديد، أو الضغط على «إنشاء لقطة جديدة».',
+    'snap.col.id':'#','snap.col.created':'تاريخ الإنشاء','snap.col.trigger':'المصدر','snap.col.source':'الملف','snap.col.rows':'عدد السجلّات','snap.col.provider':'المزوّد','snap.col.lang':'اللغة','snap.col.locked':'الحالة','snap.col.actions':'الإجراءات',
+    'snap.diff.title':'الفرق بين اللقطتَين','snap.diff.kpi':'مؤشّرات الأداء','snap.diff.added':'رؤى مُضافة','snap.diff.removed':'رؤى مُزالة','snap.diff.severity':'تذاكر تغيّرت خطورتها',
+    'snap.lock.prompt':'ملاحظة الإدارة (اختياريّة):',
+    'snap.trigger.upload':'رفع ملف','snap.trigger.manual':'يدويّ','snap.trigger.scheduled':'مجدوَل',
     'filters.title':'عوامل التصفية','filters.from':'من','filters.to':'إلى',
-    'filters.category':'الفئة','filters.severity':'الخطورة','filters.search':'بحث في النصوص',
-    'filters.toggle':'تحديد/إلغاء الكل','filters.reset':'إعادة تعيين',
-    'filters.status':'حالة التذكرة','filters.assignee':'المسؤول','filters.unassigned':'غير مسنَد',
-    'overview.title':'نظرة عامة','overview.subtitle':'مؤشرات أداء قنوات المشاركة والرؤى المستخلصة من بيانات المستفيدين خلال الفترة المحددة.',
-    'overview.insights':'رؤى الذكاء الاصطناعي','overview.insights.hint':'يحلّل الذكاء الاصطناعي كامل البيانات لاستخراج رؤى قابلة للتنفيذ هذا الأسبوع.',
-    'ai.patterns.summary':'ملخّص الذكاء الاصطناعي للأنماط',
-    'ai.patterns.summary.hint':'قراءة موجزة لما تكشفه الأنماط في الفترة الحالية.',
-    'ai.patterns.reco':'توصيات الذكاء الاصطناعي للأنماط',
-    'ai.patterns.reco.hint':'إجراءات أولوية مستخلصة من الموضوعات المتكرّرة والمتصاعدة.',
-    'ai.dq.imputed':'تنبيه جودة البيانات',
-    'ai.dq.imputed.hint':'{n} طلب من أصل {tot} في الملف لا يحملون تاريخ إغلاق — تمّ افتراض تاريخ ليُحتسبوا في التحليلات.',
-    'ai.summary.title':'ملخّص الذكاء الاصطناعي',
-    'ai.summary.hint':'سرد مكثّف لما تقوله بياناتك خلال الفترة الحالية.',
-    'ai.reco.title':'توصيات الذكاء الاصطناعي',
-    'ai.reco.hint':'الإجراءات الأهم المستخلصة من الرؤى أعلاه — مرتّبة بأولوية الأثر.',
+    'filters.category':'الفئة','filters.severity':'مستوى الخطورة','filters.search':'بحث في النصوص',
+    'filters.toggle':'تحديد الكلّ / إلغاء','filters.reset':'إعادة تعيين',
+    'filters.status':'حالة التذكرة','filters.assignee':'المسؤول','filters.unassigned':'غير مُسنَدة',
+    'overview.title':'نظرة عامّة','overview.subtitle':'ملخّص أداء قنوات التواصل، والمؤشّرات المستخلصة من مشاركات المستفيدين خلال الفترة المختارة.',
+    'overview.insights':'رؤى الذكاء الاصطناعيّ','overview.insights.hint':'يستعرض الذكاء الاصطناعيّ مجمل البيانات لاستخلاص رؤى عمليّة قابلة للتنفيذ هذا الأسبوع.',
+    'ai.patterns.summary':'ملخّص الذكاء الاصطناعيّ للأنماط',
+    'ai.patterns.summary.hint':'قراءة موجزة لأبرز ما تُظهره الأنماط في الفترة الحاليّة.',
+    'ai.patterns.reco':'توصيات الذكاء الاصطناعيّ للأنماط',
+    'ai.patterns.reco.hint':'إجراءات ذات أولويّة مستخلصة من الموضوعات المتكرّرة والمتصاعدة.',
+    'ai.dq.imputed':'تنبيه بشأن جودة البيانات',
+    'ai.dq.imputed.hint':'يوجد {n} طلبًا من أصل {tot} في الملف بدون تاريخ إغلاق — تمّ افتراض تاريخ ليُحتسب ضمن التحليل.',
+    'ai.summary.title':'ملخّص الذكاء الاصطناعيّ',
+    'ai.summary.hint':'سرد مكثّف لأبرز ما تُظهره بياناتك خلال الفترة الحاليّة.',
+    'ai.reco.title':'توصيات الذكاء الاصطناعيّ',
+    'ai.reco.hint':'الإجراءات الأعلى أثرًا المستخلَصة من الرؤى أعلاه — مرتّبة بحسب الأولويّة.',
     'pipeline.title':'حالة التذاكر',
-    'pipeline.hint':'حالة التذاكر الحالية موزّعة على مراحل المعالجة.',
-    'ai.ticket.summary':'ملخّص الذكاء الاصطناعي',
-    'ai.ticket.suggestions':'اقتراحات الذكاء الاصطناعي',
-    'ai.ticket.recommendation':'توصية الذكاء الاصطناعي',
+    'pipeline.hint':'توزيع التذاكر الحاليّة على مراحل المعالجة.',
+    'ai.ticket.summary':'ملخّص الذكاء الاصطناعيّ',
+    'ai.ticket.suggestions':'اقتراحات الذكاء الاصطناعيّ',
+    'ai.ticket.recommendation':'توصية الذكاء الاصطناعيّ',
     'ai.ticket.similar':'تذاكر مشابهة',
-    'patterns.title':'الأنماط والاتجاهات','patterns.subtitle':'الموضوعات المتكرّرة، اتجاهات الخطورة عبر الزمن، والموضوعات المتصاعدة في الفترة الأخيرة.',
-    'alerts.title':'الإنذار المبكر','alerts.subtitle':'ارتفاعات غير معتادة في الفئات أو الموضوعات خلال آخر أسبوع، مع توصية تحسين استباقية.',
-    'actions.title':'الإجراءات المقترحة','actions.subtitle':'تصنيف ذكي لكل طلب مع تبرير مستوى الخطورة وإجراء قابل للاعتماد.',
+    'patterns.title':'الأنماط والاتّجاهات','patterns.subtitle':'الموضوعات الأكثر تكرارًا، واتّجاهات الخطورة عبر الزمن، والموضوعات المتصاعدة في الفترة الأخيرة.',
+    'alerts.title':'الإنذار المبكّر','alerts.subtitle':'ارتفاعات غير معتادة في الفئات أو الموضوعات خلال الأسبوع الأخير، مع توصيات استباقيّة للتحسين.',
+    'actions.title':'الإجراءات المقترحة','actions.subtitle':'تصنيف ذكيّ لكلّ طلب مع تبرير مستوى الخطورة، وإجراء جاهز للاعتماد.',
     'actions.high_only':'الخطورة العالية فقط',
-    'qa.title':'استعلام حر — اسأل البيانات','qa.subtitle':'اطرح سؤالاً بلغة طبيعية على الشريحة المُصفّاة.',
-    'qa.label':'سؤالك','qa.placeholder':'مثال: ما أبرز ثلاثة مواضيع تستحق تحسيناً استباقياً؟',
-    'qa.submit':'اسأل','qa.answer':'الإجابة','qa.context_toggle':'عرض ملخّص البيانات المستخدمة كسياق',
-    'data.title':'إدارة البيانات','data.subtitle':'رفع ملفات Excel جديدة لإضافتها إلى البيانات الحالية. يتم الدمج مع إزالة التكرارات.',
-    'data.files':'الملفات المُدخلة','data.col.name':'اسم الملف','data.col.size':'الحجم','data.col.added':'تاريخ الإضافة',
+    'qa.title':'استعلام مباشر — اسأل بياناتك','qa.subtitle':'اطرح سؤالًا بلغة طبيعيّة على الشريحة المُصفّاة من البيانات.',
+    'qa.label':'سؤالك','qa.placeholder':'مثال: ما أبرز ثلاثة موضوعات تستحقّ تحسينًا استباقيًا؟',
+    'qa.submit':'اسأل','qa.answer':'الإجابة','qa.context_toggle':'عرض ملخّص البيانات المستخدَمة كسياق',
+    'data.title':'إدارة البيانات','data.subtitle':'رفع ملفات إكسل جديدة لإلحاقها بالبيانات الحاليّة. يتمّ الدمج مع إزالة التكرار تلقائيًا.',
+    'data.files':'الملفات المُدخَلة','data.col.name':'اسم الملف','data.col.size':'الحجم','data.col.added':'تاريخ الإضافة',
     'data.format':'صيغة الملف المطلوبة','data.format.hint':'يجب أن يحتوي الملف على الأعمدة التالية بالترتيب:',
-    'data.format.id':'الرقم — رقم الطلب الفريد','data.format.type':'الطلب — نوع الطلب',
-    'data.format.cat':'العنوان — فئة الطلب (شكوى / استفسار / اقتراح / دعم فني / خدمة مراجع)',
-    'data.format.body':'نص الطلب — وصف موجز','data.format.date':'تاريخ الانتهاء — تاريخ إغلاق الطلب',
-    'col.id':'رقم الطلب','col.body':'نص الطلب','col.category':'الفئة','col.topic':'الموضوع',
+    'data.format.id':'الرقم — معرّف الطلب الفريد','data.format.type':'الطلب — نوع الطلب',
+    'data.format.cat':'العنوان — فئة الطلب (شكوى / استفسار / اقتراح / دعم فنّيّ / خدمة المراجعين)',
+    'data.format.body':'نصّ الطلب — وصف موجز','data.format.date':'تاريخ الانتهاء — تاريخ إغلاق الطلب',
+    'col.id':'رقم الطلب','col.body':'نصّ الطلب','col.category':'الفئة','col.topic':'الموضوع',
     'col.severity':'الخطورة','col.severity_reason':'تبرير الخطورة','col.action':'الإجراء المقترح','col.closed':'تاريخ الإغلاق',
-    'sev.high':'عالية','sev.med':'متوسطة','sev.low':'منخفضة',
-    'chart.weekly':'تطور حجم الطلبات أسبوعياً',
-    'chart.categories':'التوزيع حسب الفئة',
-    'chart.severity':'التوزيع حسب الخطورة',
-    'chart.severity.hint':'الخطورة مُستنبطة من تحليل النص والفئة لكل طلب.',
-    'chart.forecast':'توقّع الأسبوعين القادمين',
-    'chart.forecast.hint':'تنبؤ مبني على تنعيم أسّي ضمن نطاق ثقة.',
-    'chart.topics':'أعلى ١٠ مواضيع تكراراً',
-    'chart.topics.hint':'يدلّ اللون على نسبة الخطورة العالية في كل موضوع.',
-    'chart.subcategories':'التصنيفات الفرعية حسب الفئة','chart.subcategories.hint':'تفصيل أعمق داخل كل فئة (متوفر بعد ربط نموذج الذكاء الاصطناعي)','chart.subcategories.coverage':'نسبة التذاكر ذات تصنيف فرعي معروف: {pct}٪','chart.subcategories.empty':'لا تزال جميع التذاكر بدون تصنيف فرعي. اربط Groq أو Ollama لتفعيل التصنيف الفرعي.','chart.count':'العدد',
-    'chart.severity_weekly':'اتجاه الخطورة عبر الأسابيع',
-    'chart.momentum':'موضوعات متصاعدة','chart.momentum.hint':'آخر ٤ أسابيع مقابل الفترة المماثلة قبلها.',
-    'chart.weekly_cat':'الاتجاه الأسبوعي حسب الفئة',
-    'chart.matrix':'مصفوفة الفئة × الخطورة','chart.matrix.hint':'اضغط على الخلية للتفاصيل.',
-    'chart.recurring':'حالات متكرّرة','chart.recurring.hint':'طلبات بنص متطابق تكرّر — قد تشير إلى مستفيد متكرر أو مشكلة منهجية.',
-    'caption.weekly':'بلغ الذروة في أسبوع {peak} ({peakv} طلب). متوسط أسبوعي: {avg} طلب.',
-    'caption.cats':'{top} هي الفئة الأكبر بنسبة {topPct}، وأقل الفئات تمثيلاً «{low}» بنسبة {lowPct}.',
-    'caption.sev':'{high} من الطلبات بخطورة عالية. كلما ارتفعت النسبة، زادت الحاجة للتدخل المباشر.',
-    'caption.fc':'متوقّع الأسبوع القادم: {next} طلب (مقابل {last} في الأسبوع الأخير، نطاق ثقة {lo}–{hi}).',
-    'caption.topics':'الموضوع الأبرز «{name}» بـ{count} طلب وخطورة عالية {high}.',
-    'caption.sevW':'الخطورة العالية تشكّل {pct} من الإجمالي خلال الفترة. الاتجاه: {trend}.',
-    'caption.weeklyCat':'الفئات تعرض اتجاهات متباينة عبر الأسابيع.',
-    'caption.matrix':'تركيز الخطورة العالية في {pair}.',
-    'trend.up':'تصاعد','trend.down':'انحسار','trend.flat':'مستقر',
-    'kpi.total':'إجمالي الطلبات','kpi.complaints':'نسبة الشكاوى',
-    'kpi.high':'الخطورة العالية','kpi.cats':'الفئات النشطة','kpi.insufficient':'سياق غير كافٍ','kpi.insufficient.hint':'الطلبات التي يقلّ نص الموضوع فيها عن أربعة أحرف ذات معنى أو يساوي عبارات عامة (hi, test, عام، إلخ)','kpi.insufficient.sub':'تذاكر تحتاج توضيحاً من المستفيد قبل التصنيف',
-    'kpi.delta.up':'↑ {pct} مقابل المتوسط الأسبوعي','kpi.delta.down':'↓ {pct} مقابل المتوسط الأسبوعي',
+    'sev.high':'عالية','sev.med':'متوسّطة','sev.low':'منخفضة',
+    'chart.weekly':'تطوّر حجم الطلبات أسبوعيًّا',
+    'chart.categories':'التوزيع بحسب الفئة',
+    'chart.severity':'التوزيع بحسب مستوى الخطورة',
+    'chart.severity.hint':'يُستنبَط مستوى الخطورة من تحليل النصّ والفئة لكلّ طلب.',
+    'chart.forecast':'توقّع الأسبوعين القادمَين',
+    'chart.forecast.hint':'تنبّؤ مبنيّ على التنعيم الأسّيّ ضمن نطاق ثقة.',
+    'chart.topics':'أعلى ١٠ موضوعات تكرارًا',
+    'chart.topics.hint':'يُشير اللون إلى نسبة الخطورة العالية ضمن كلّ موضوع.',
+    'chart.subcategories':'التصنيفات الفرعيّة بحسب الفئة','chart.subcategories.hint':'تفصيل أدقّ ضمن كلّ فئة (يُفعَّل عند ربط نموذج ذكاء اصطناعيّ).','chart.subcategories.coverage':'نسبة التذاكر ذات تصنيف فرعيّ معروف: {pct}٪','chart.subcategories.empty':'لا تزال جميع التذاكر دون تصنيف فرعيّ. يلزم ربط Groq أو Ollama لتفعيل التصنيف الفرعيّ.','chart.count':'العدد',
+    'chart.severity_weekly':'اتّجاه الخطورة عبر الأسابيع',
+    'chart.momentum':'موضوعات متصاعدة','chart.momentum.hint':'مقارنة آخر ٤ أسابيع بالفترة المماثلة قبلها.',
+    'chart.weekly_cat':'الاتّجاه الأسبوعيّ بحسب الفئة',
+    'chart.matrix':'مصفوفة الفئة × الخطورة','chart.matrix.hint':'اضغط على الخليّة لعرض التفاصيل.',
+    'chart.recurring':'حالات متكرّرة','chart.recurring.hint':'طلبات متماثلة النصّ — قد تُشير إلى مستفيد متكرّر، أو إلى إشكاليّة منهجيّة.',
+    'caption.weekly':'بلغ الذروة في أسبوع {peak} ({peakv} طلب). المتوسّط الأسبوعيّ: {avg} طلب.',
+    'caption.cats':'الفئة «{top}» هي الأعلى بنسبة {topPct}، وأقلّها تمثيلًا «{low}» بنسبة {lowPct}.',
+    'caption.sev':'{high} من الطلبات بخطورة عالية. كلّما ارتفعت النسبة، ازدادت الحاجة إلى تدخّل مباشر.',
+    'caption.fc':'التوقّع للأسبوع القادم: {next} طلب (مقابل {last} في الأسبوع الأخير، نطاق الثقة {lo}–{hi}).',
+    'caption.topics':'الموضوع الأبرز «{name}» بـ{count} طلب، وخطورة عالية {high}.',
+    'caption.sevW':'تشكّل الخطورة العالية {pct} من إجماليّ الطلبات في الفترة. الاتّجاه: {trend}.',
+    'caption.weeklyCat':'تُظهر الفئات اتّجاهات متباينة عبر الأسابيع.',
+    'caption.matrix':'تتركّز الخطورة العالية في {pair}.',
+    'trend.up':'تصاعد','trend.down':'انحسار','trend.flat':'مستقرّ',
+    'kpi.total':'إجماليّ الطلبات','kpi.complaints':'نسبة الشكاوى',
+    'kpi.high':'الخطورة العالية','kpi.cats':'الفئات النشطة','kpi.insufficient':'سياق غير كافٍ','kpi.insufficient.hint':'الطلبات التي يقلّ نصّها عن أربعة أحرف ذات معنى، أو يطابق عبارات عامّة (مثل: hi، test، عام).','kpi.insufficient.sub':'تذاكر تحتاج إلى توضيح من المستفيد قبل تصنيفها',
+    'kpi.delta.up':'↑ {pct} مقارنةً بالمتوسّط الأسبوعيّ','kpi.delta.down':'↓ {pct} مقارنةً بالمتوسّط الأسبوعيّ',
     'kpi.delta.na':'غير متاح',
     'insight.tag.evidence':'الملاحظة','insight.tag.action':'الإجراء','insight.tag.metric':'المقياس',
-    'drawer.eyebrow':'السجلات المرتبطة',
-    'drawer.records':'{n} سجل مطابق · معروض {m}',
-    'drawer.empty':'لا توجد سجلات مطابقة.',
+    'drawer.eyebrow':'السجلّات المرتبطة',
+    'drawer.records':'{n} سجلًّا مطابقًا · معروض {m}',
+    'drawer.empty':'لا توجد سجلّات مطابقة.',
     'drawer.topic':'الموضوع','drawer.severity_reason':'تبرير الخطورة','drawer.action':'الإجراء المقترح',
-    'upload.title':'رفع ملف Excel جديد','upload.note':'سيتم دمج الملف مع البيانات الموجودة. الطلبات بنفس الرقم لن تتكرّر.',
-    'upload.drop':'اسحب الملف هنا، أو اضغط للاختيار','upload.hint':'صيغة .xlsx فقط — حد أقصى 50 ميغابايت',
+    'upload.title':'رفع ملف إكسل جديد','upload.note':'سيتمّ دمج الملف مع البيانات الحاليّة. الطلبات بنفس الرقم لن تتكرّر.',
+    'upload.drop':'اسحب الملف هنا، أو اضغط للاختيار','upload.hint':'صيغة .xlsx فقط — الحدّ الأقصى ٥٠ ميغابايت',
     'upload.uploading':'جارٍ رفع الملف…','upload.processing':'جارٍ التحليل والتصنيف…',
     'upload.success':'تمّت المعالجة بنجاح','upload.submit':'رفع ومعالجة',
-    'engine.groq':'Groq متاح','engine.ollama':'النموذج المحلي متاح','engine.rule':'الوضع الآمن — تحليلات قاعدية',
-    'examples.q1':'ما أبرز ثلاثة مواضيع تستحق تحسيناً استباقياً؟',
-    'examples.q2':'هل هناك تصاعد في شكاوى السداد؟',
-    'examples.q3':'ما الفئات الأقل شيوعاً ولماذا قد نتجاهلها؟',
-    'na':'—','of':'من','records':'سجل','request':'طلب',
-    'chart.linked':'الطلبات المترابطة دلالياً',
-    'chart.linked.hint':'يجمع الذكاء الاصطناعي الطلبات المتشابهة في القصد ويلخّص ما يطلبه المستفيد فعلاً.',
+    'engine.groq':'Groq متاح','engine.ollama':'النموذج المحلّيّ متاح','engine.rule':'الوضع الآمن — تحليلات قاعديّة',
+    'examples.q1':'ما أبرز ثلاثة موضوعات تستحقّ تحسينًا استباقيًا؟',
+    'examples.q2':'هل ثمّة تصاعد في شكاوى السداد؟',
+    'examples.q3':'ما الفئات الأقلّ شيوعًا، وما تبرير إعطائها أولويّة أدنى؟',
+    'na':'—','of':'من','records':'سجلّ','request':'طلب',
+    'chart.linked':'الطلبات المترابطة دلاليًّا',
+    'chart.linked.hint':'يجمع الذكاء الاصطناعيّ الطلبات المتشابهة في القصد، ويُلخّص ما يطلبه المستفيد فعليًّا.',
     'linked.intent':'ما يطلبه المستفيد',
-    'linked.response':'الإجراء الموصى به للموظف',
+    'linked.response':'الإجراء الموصى به للموظّف',
     'linked.examples':'أمثلة',
-    'linked.tickets':'فتح كل التذاكر',
-    'linked.refine':'تنقيح بالذكاء الاصطناعي',
-    'linked.refining':'جاري التحليل…',
+    'linked.tickets':'فتح جميع التذاكر',
+    'linked.refine':'تنقيح بالذكاء الاصطناعيّ',
+    'linked.refining':'جارٍ التحليل…',
     'linked.rationale':'سبب التحليل',
-    'pop.title':'مقارنة آخر أسبوعين بالأسبوعين السابقين',
-    'pop.total':'إجمالي الطلبات','pop.complaints':'الشكاوى','pop.high':'الخطورة العالية',
-    'pop.empty':'لا تتوفر بيانات كافية للمقارنة',
-    'insight.kind.anomaly':'تنبيه','insight.kind.risk':'خطر','insight.kind.momentum':'اتجاه',
+    'pop.title':'مقارنة آخر أسبوعين بالأسبوعين السابقَين',
+    'pop.total':'إجماليّ الطلبات','pop.complaints':'الشكاوى','pop.high':'الخطورة العالية',
+    'pop.empty':'لا تتوفّر بيانات كافية للمقارنة.',
+    'insight.kind.anomaly':'تنبيه','insight.kind.risk':'خطر','insight.kind.momentum':'اتّجاه',
     'insight.kind.complaints':'شكاوى','insight.kind.opportunity':'فرصة','insight.kind.recurring':'تكرار',
-    'insight.examples':'أمثلة من البيانات','insight.see_records':'عرض السجلات',
-    'insight.causes':'أسباب محتملة (تحليل ٢٠/٨٠)',
-    'preset.7d':'٧ أيام','preset.30d':'٣٠ يوم','preset.90d':'٩٠ يوم',
-    'preset.thisMonth':'هذا الشهر','preset.lastMonth':'الشهر الماضي','preset.all':'كل البيانات',
+    'insight.examples':'أمثلة من البيانات','insight.see_records':'عرض السجلّات',
+    'insight.causes':'الأسباب المحتملة (تحليل ٢٠/٨٠)',
+    'preset.7d':'٧ أيّام','preset.30d':'٣٠ يومًا','preset.90d':'٩٠ يومًا',
+    'preset.thisMonth':'هذا الشهر','preset.lastMonth':'الشهر الماضي','preset.all':'كامل البيانات',
     'ticket.title':'بطاقة الطلب','ticket.status':'الحالة','ticket.assignee':'المسؤول',
-    'ticket.unassigned':'غير مسنَد','ticket.acting_as':'تتصرف بصفة',
-    'ticket.activity':'سجل النشاط','ticket.add_comment':'إضافة تعليق',
+    'ticket.unassigned':'غير مُسنَدة','ticket.acting_as':'تتصرّف بصفة',
+    'ticket.activity':'سجلّ النشاط','ticket.add_comment':'إضافة تعليق',
     'ticket.send':'إرسال','ticket.no_comments':'لا توجد تعليقات بعد.',
     'ticket.no_history':'لا تغييرات بعد.',
     'ticket.record':'تفاصيل الطلب','ticket.recommended':'الإجراء المقترح',
     'ticket.column':'الحالة',
-    'ticket.severity_ai_default':'تصنيف ذكي (تلقائي)',
-    'status.open':'مفتوح','status.in_progress':'قيد المعالجة','status.pending':'بانتظار رد',
-    'status.resolved':'محلول','status.closed':'مغلق',
+    'ticket.severity_ai_default':'تصنيف ذكيّ (تلقائيّ)',
+    'status.open':'مفتوحة','status.in_progress':'قيد المعالجة','status.pending':'بانتظار الردّ',
+    'status.resolved':'محلولة','status.closed':'مغلقة',
     'history.changed':'غيّر الحالة من','history.to':'إلى',
   },
   en: {
     'app.title':'Beneficiary Engagement Analytics',
-    'app.subtitle':'Intelligent analysis of beneficiary submissions across digital channels',
+    'app.subtitle':'AI-powered analysis of ADF beneficiary submissions across digital channels',
     'action.upload':'Upload file','action.reprocess':'Reprocess',
     'action.export':'Export','action.cancel':'Cancel',
+    'action.export_xlsx':'Export to Excel',
+    'action.exporting':'Exporting…',
+    'action.export_failed':'The export failed. Please try again.',
+    'footer.org':'Agricultural Development Fund',
+    'footer.app':'Beneficiary Engagement Analytics — All rights reserved',
     'status.loading':'Loading','status.engine':'AI engine',
     'nav.title':'Sections','nav.overview':'Overview','nav.patterns':'Patterns & Trends',
     'nav.alerts':'Early warning','nav.actions':'Suggested actions','nav.qa':'Free query',
@@ -961,6 +1002,52 @@ async function api(path) {
   if (!r.ok) throw new Error(`${path} → ${r.status}`);
   return r.json();
 }
+
+/* ====== Excel export (v1.3.0) ========================================== */
+async function downloadXlsx(kind, btn) {
+  const q = buildQuery();
+  const sep = q ? '&' : '';
+  const url = `/api/export/${encodeURIComponent(kind)}?lang=${LANG}${sep}${q}`;
+  const orig = btn ? btn.innerHTML : null;
+  if (btn) {
+    btn.disabled = true;
+    btn.innerHTML = `<svg class="icon"><use href="#i-refresh"/></svg><span>${t('action.exporting')}</span>`;
+  }
+  try {
+    const r = await fetch(url);
+    if (!r.ok) throw new Error(`export ${kind} → ${r.status}`);
+    // Filename from the response
+    let filename = `ADF-${kind}.xlsx`;
+    const cd = r.headers.get('content-disposition') || '';
+    const m = cd.match(/filename="([^"]+)"/);
+    if (m) filename = m[1];
+    const blob = await r.blob();
+    const a = document.createElement('a');
+    const objUrl = URL.createObjectURL(blob);
+    a.href = objUrl;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(objUrl);
+  } catch (e) {
+    console.error('export failed:', e);
+    alert(t('action.export_failed'));
+  } finally {
+    if (btn && orig != null) {
+      btn.disabled = false;
+      btn.innerHTML = orig;
+    }
+  }
+}
+
+document.addEventListener('click', (ev) => {
+  const btn = ev.target.closest('.btn-export');
+  if (!btn) return;
+  const kind = btn.dataset.export;
+  if (!kind) return;
+  downloadXlsx(kind, btn);
+});
 
 /* ====== Bootstrap ===================================================== */
 async function bootstrap() {
