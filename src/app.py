@@ -51,9 +51,9 @@ TEMPLATES_DIR = ROOT / "templates"
 STATIC_DIR = ROOT / "static"
 
 app = FastAPI(
-    title="منصة تحليل مشاركات المستفيدين",
-    description="تحليل ذكي لمشاركات المستفيدين — معالجة محلية بالكامل.",
-    version="1.2.0",
+    title="منصّة تحليل مشاركات المستفيدين — صندوق التنمية الزراعية",
+    description="تحليل ذكي لمشاركات المستفيدين عبر القنوات الرقمية — معالجة محلية بالكامل.",
+    version="1.3.0",
 )
 
 
@@ -1065,3 +1065,271 @@ def api_diff_snapshots(a_id: int, b_id: int):
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
 # <<< ADF v1.1.0 SNAPSHOT ENDPOINTS <<<
+
+
+# =============================================================================
+# >>> ADF v1.3.0 — Excel export endpoints                                   >>>
+# =============================================================================
+# Four formatted-with-charts exports, one per user-facing report surface.
+# Each endpoint reuses the same `_params(...)` filter helper so the exported
+# slice exactly matches what the user sees on screen.
+#
+# Files come back as application/vnd.openxmlformats-officedocument.spreadsheetml.sheet
+# with a Content-Disposition that suggests an ADF-branded filename.
+# =============================================================================
+
+from fastapi.responses import StreamingResponse  # noqa: E402
+from src import excel_export  # noqa: E402
+
+_XLSX_MIME = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+
+
+def _xlsx_response(data: bytes, *, report: str, lang: str) -> StreamingResponse:
+    fname = excel_export.filename_for(report, lang=lang)
+    return StreamingResponse(
+        iter([data]),
+        media_type=_XLSX_MIME,
+        headers={
+            "Content-Disposition": f'attachment; filename="{fname}"',
+            "Content-Length": str(len(data)),
+            "Cache-Control": "no-store",
+        },
+    )
+
+
+def _filter_summary(date_from, date_to, category, severity, lang: str) -> dict:
+    """Human-readable summary of the active filters for the cover sheet."""
+    if lang.startswith("ar"):
+        s = {
+            "النطاق الزمني": (
+                f"{date_from or '—'} → {date_to or '—'}"
+                if (date_from or date_to) else "كامل البيانات"
+            ),
+            "الفئات": "، ".join(category) if category else "كل الفئات",
+            "مستويات الخطورة": "، ".join(severity) if severity else "كل المستويات",
+        }
+    else:
+        s = {
+            "Date range": (
+                f"{date_from or '—'} → {date_to or '—'}"
+                if (date_from or date_to) else "All data"
+            ),
+            "Categories": ", ".join(category) if category else "All categories",
+            "Severity levels": ", ".join(severity) if severity else "All levels",
+        }
+    return s
+
+
+# --- helpers that mirror the JSON-route inline computations ---------------
+
+def _export_weekly(fdf: pd.DataFrame) -> list[dict]:
+    if fdf.empty:
+        return []
+    g = fdf.groupby(fdf["week_start"]).size().sort_index()
+    return [{"week": d.strftime("%Y-%m-%d"), "count": int(v)} for d, v in g.items()]
+
+
+def _export_categories(fdf: pd.DataFrame) -> list[dict]:
+    if fdf.empty:
+        return []
+    s = fdf["category"].value_counts()
+    return [{"name": k, "count": int(v)} for k, v in s.items()]
+
+
+def _export_severity(fdf: pd.DataFrame) -> list[dict]:
+    if fdf.empty:
+        return []
+    s = fdf["severity"].value_counts().reindex(analytics.SEVERITY_ORDER, fill_value=0)
+    return [{"severity": k, "count": int(v)} for k, v in s.items()]
+
+
+def _export_weekly_by_cat(fdf: pd.DataFrame) -> list[dict]:
+    if fdf.empty:
+        return []
+    pivot = (
+        fdf.groupby([fdf["week_start"], "category"]).size().unstack(fill_value=0).sort_index()
+    )
+    out = []
+    for d, row in pivot.iterrows():
+        for col, v in row.items():
+            if int(v):
+                out.append({"week": d.strftime("%Y-%m-%d"), "category": col, "count": int(v)})
+    return out
+
+
+def _export_topics(fdf: pd.DataFrame, top_n: int = 10) -> list[dict]:
+    if fdf.empty:
+        return []
+    try:
+        tdf = analytics.top_recurring_topics(fdf, top_n=top_n)
+    except Exception:
+        return []
+    rows = []
+    for _, r in tdf.iterrows():
+        rows.append({
+            "name":       r.get("topic_label", ""),
+            "count":      int(r.get("count", 0) or 0),
+            "high_count": int(r.get("high_count", 0) or 0),
+        })
+    return rows
+
+
+def _export_severity_weekly(fdf: pd.DataFrame) -> list[dict]:
+    if fdf.empty:
+        return []
+    try:
+        sdf = analytics.severity_by_week(fdf)
+    except Exception:
+        return []
+    rows = []
+    for _, r in sdf.iterrows():
+        rows.append({
+            "week": (r.get("week_start").strftime("%Y-%m-%d")
+                     if hasattr(r.get("week_start"), "strftime")
+                     else str(r.get("week_start", ""))),
+            "high": int(r.get("high", 0) or 0),
+            "med":  int(r.get("med", 0) or 0),
+            "low":  int(r.get("low", 0) or 0),
+        })
+    return rows
+
+
+def _export_momentum(fdf: pd.DataFrame) -> list[dict]:
+    if fdf.empty:
+        return []
+    try:
+        mdf = analytics.topic_momentum(fdf)
+    except Exception:
+        return []
+    rows = []
+    for _, r in mdf.iterrows():
+        rows.append({
+            "topic":  r.get("topic_label", "") or r.get("topic", ""),
+            "recent": int(r.get("recent", 0) or 0),
+            "prior":  int(r.get("prior", 0) or 0),
+            "delta":  int(r.get("delta", 0) or 0),
+        })
+    return rows
+
+
+def _export_alerts(fdf: pd.DataFrame) -> list[dict]:
+    if fdf.empty:
+        return []
+    try:
+        adf = analytics.detect_weekly_anomalies(fdf)
+    except Exception:
+        return []
+    if hasattr(adf, "to_dict"):
+        return adf.to_dict(orient="records")
+    return list(adf or [])
+
+
+def _kpis_for_export(fdf: pd.DataFrame) -> dict:
+    try:
+        k = analytics.compute_kpis(fdf)
+    except Exception:
+        return {"total": 0, "complaints_pct": 0, "high_severity": 0,
+                "active_categories": 0, "insufficient_pct": 0}
+    return {
+        "total":              int(k.total),
+        "complaints_pct":     round(k.pct_complaints, 1),
+        "high_severity":      int((fdf["severity"] == "high").sum()) if not fdf.empty else 0,
+        "active_categories":  int((k.by_category > 0).sum()) if hasattr(k, "by_category") else 0,
+        "insufficient_pct":   round(getattr(k, "pct_insufficient_context", 0.0), 1),
+    }
+
+
+@app.get("/api/export/overview")
+def export_overview(
+    date_from: Optional[date] = Query(None, alias="from"),
+    date_to:   Optional[date] = Query(None, alias="to"),
+    category:  Optional[list[str]] = Query(None),
+    severity:  Optional[list[str]] = Query(None),
+    lang: str = Query("ar"),
+):
+    df = _params(date_from, date_to, category, severity)
+
+    data = excel_export.build_overview_workbook(
+        df=df,
+        kpis=_kpis_for_export(df),
+        weekly=_export_weekly(df),
+        categories=_export_categories(df),
+        severity=_export_severity(df),
+        alerts=_export_alerts(df),
+        filter_summary=_filter_summary(date_from, date_to, category, severity, lang),
+        lang=lang,
+    )
+    return _xlsx_response(data, report="overview", lang=lang)
+
+
+@app.get("/api/export/patterns")
+def export_patterns(
+    date_from: Optional[date] = Query(None, alias="from"),
+    date_to:   Optional[date] = Query(None, alias="to"),
+    category:  Optional[list[str]] = Query(None),
+    severity:  Optional[list[str]] = Query(None),
+    lang: str = Query("ar"),
+):
+    df = _params(date_from, date_to, category, severity)
+
+    data = excel_export.build_patterns_workbook(
+        weekly=_export_weekly(df),
+        categories=_export_categories(df),
+        severity=_export_severity(df),
+        severity_weekly=_export_severity_weekly(df),
+        momentum=_export_momentum(df),
+        topics=_export_topics(df, top_n=15),
+        weekly_by_cat=_export_weekly_by_cat(df),
+        subcategories=[],  # populated only when LLM is connected
+        filter_summary=_filter_summary(date_from, date_to, category, severity, lang),
+        lang=lang,
+    )
+    return _xlsx_response(data, report="patterns", lang=lang)
+
+
+@app.get("/api/export/recommendations")
+def export_recommendations(
+    snapshot_id: Optional[int] = None,
+    lang: str = Query(default="ar"),
+):
+    """Export the named snapshot, or the most recent one if `snapshot_id` is omitted."""
+    snap: Optional[dict] = None
+    if snapshot_id is not None:
+        snap = recs.get_snapshot(snapshot_id)
+    else:
+        runs = recs.list_snapshots(limit=1)
+        if runs:
+            snap = recs.get_snapshot(runs[0]["id"])
+
+    insights: list[dict] = []
+    kpis_d: dict = {}
+    if snap:
+        insights = list(snap.get("insights") or [])
+        kpis_d   = dict(snap.get("kpis") or {})
+
+    data = excel_export.build_recommendations_workbook(
+        snapshot=snap, insights=insights, kpis=kpis_d, lang=lang,
+    )
+    return _xlsx_response(data, report="recommendations", lang=lang)
+
+
+@app.get("/api/export/tickets")
+def export_tickets(
+    date_from: Optional[date] = None,
+    date_to: Optional[date]   = None,
+    category: Optional[list[str]] = Query(default=None),
+    severity: Optional[list[str]] = Query(default=None),
+    lang: str = Query(default="ar"),
+):
+    df = _params(date_from, date_to, category, severity)
+
+    # Cap export size — 50k rows is plenty and keeps file under ~10 MB.
+    if df is not None and len(df) > 50_000:
+        df = df.head(50_000)
+
+    data = excel_export.build_tickets_workbook(
+        df=df,
+        filter_summary=_filter_summary(date_from, date_to, category, severity, lang),
+        lang=lang,
+    )
+    return _xlsx_response(data, report="tickets", lang=lang)
