@@ -1,5 +1,42 @@
 # Changelog
 
+## [1.5.0] — 2026-05-04
+
+Readability and copy-quality release. Addresses the on-screen issues
+caught during dashboard review.
+
+### Fixed
+- **Empty drawer fields no longer render as "—"**. The records
+  side-panel previously showed `الموضوع: —`, `سبب الخطورة: —`, and
+  `الإجراء: —` when those fields were absent (which happens when no
+  LLM provider is configured). v1.5.0 omits the line entirely when
+  the underlying value is missing or just a placeholder dash.
+
+### Changed
+- **Western (Hindu-Arabic) numerals everywhere**. `1, 2, 3 …` instead
+  of `١, ٢, ٣ …` in both Arabic and English modes. The legacy
+  `toAr()` is now a no-op so all numeric tokens, IDs, percentages,
+  KPI values, dates, and chart axes render with `0–9`.
+- **No diacritics (تشكيل)**. Stripped 27 fatha/damma/kasra/shadda/
+  sukun/tanween marks from the entire template. The Arabic copy is
+  now plain script as requested.
+- **Removed the word "رؤى"** across the UI. Replaced with `تحليلات`
+  (or `الملاحظات` / `النتائج` depending on context).
+- **Shorter, more everyday wording** in the Arabic UI. Examples:
+  `محرّك التحليل → حالة التحليل`, `استعلام مباشر → اسأل بياناتك`,
+  `الإجراءات الأعلى أثرًا → الإجراءات الأكثر تأثيرًا`,
+  `موضوعات متصاعدة → موضوعات في ارتفاع`,
+  `سرد مكثّف → سرد قصير`.
+- **AI summary renders as bullet points**, not a paragraph. The
+  summary text is split on sentence boundaries (`.`, `!`, `?`,
+  `؟`) and each sentence becomes a list item with a green DGA
+  bullet — scannable at a glance.
+
+### Notes
+- Front-end-only release; no backend route changes. The Excel export
+  module, the period comparison endpoint, and the four export routes
+  are unchanged from v1.4.0.
+
 ## [1.4.0] — 2026-05-04
 
 Visual identity + admin controls release. Aligns the platform with the
