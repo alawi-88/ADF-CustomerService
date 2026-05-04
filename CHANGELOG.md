@@ -1,5 +1,33 @@
 # Changelog
 
+## [1.6.0] — 2026-05-04
+
+Icon style unification — DGA-aligned outline-only spec. Per project
+direction the canonical Figma assets aren't being adopted on this
+release; instead every icon is normalised to a single visual rule so
+later swap-in of the DGA SVGs is a trivial path replace.
+
+### Changed
+- **Single icon spec across the platform**: 24×24 grid, `fill="none"`,
+  `stroke="currentColor"`, `stroke-width="1.5"`, round line caps and
+  joins. Applies to all 15 icon symbols (`#i-overview` through
+  `#i-chevron-down`).
+- **No tinted icons anywhere**. The upstream `dga.css` rule
+  `.nav__item.is-active .nav__icon { color: var(--primary); }` tinted
+  the active sidebar icon green. v1.6.0 overrides that and any
+  similar rule via a defensive `.icon, .icon *, .nav__icon { fill:
+  none !important; stroke: currentColor; … }` block in
+  `dga_overrides.css`. Active state is now signalled via text weight
+  and background only — icons stay monochrome.
+- Active sidebar item gains `font-weight: 600` to compensate for the
+  removed icon-tint affordance.
+
+### Notes
+- This release is icon-only. The full DGA component primitives (from
+  the Components Library Figma file) are still pending: the project
+  isn't using the Figma Dev Mode MCP server, so programmatic asset
+  extraction isn't available, and a manual SVG export was deferred.
+
 ## [1.5.0] — 2026-05-04
 
 Readability and copy-quality release. Addresses the on-screen issues

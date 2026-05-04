@@ -257,6 +257,39 @@ textarea:focus-visible,
 }
 
 /* =========================================================================
+   v1.6.0 — DGA icon style: outline strokes only, never tinted
+   ========================================================================= */
+/* All icons inherit color from their text container (currentColor).
+   Defensive: stop any rule from forcing a brand or semantic color on
+   the SVG itself or its descendants.                                    */
+.icon,
+.icon *,
+.nav__icon,
+.nav__icon * {
+  fill: none !important;
+  stroke: currentColor;
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+/* Override the upstream rule that tinted active sidebar icons green.   */
+.nav__item.is-active .nav__icon,
+.nav__item.is-active .nav__icon * {
+  color: inherit !important;          /* fall back to nav-item text color */
+  stroke: currentColor !important;
+}
+/* Active state is signalled via background + bold text, not icon tint. */
+.nav__item.is-active {
+  font-weight: 600;
+}
+/* Severity / status pills already tint their *backgrounds*; their inner
+   icons must stay monochrome.                                          */
+.pill .icon,
+.pill .icon * {
+  stroke: currentColor !important;
+}
+
+/* =========================================================================
    v1.5.0 — bullet-style AI summary (replaces narrative paragraph)
    ========================================================================= */
 .ai-summary__list {
