@@ -1,5 +1,51 @@
 # Changelog
 
+## [1.4.0] — 2026-05-04
+
+Visual identity + admin controls release. Aligns the platform with the
+DGA design system (typography, color, dark header) and gives the admin
+direct control over comparison periods and export periods.
+
+### Added
+- **DGA color system** — full primary green ramp (50–900), secondary
+  navy ramp, warm-neutral ramp, and DGA-aligned semantic colors —
+  declared as `--dga-*` CSS custom properties in
+  `static/dga_overrides.css`. Supersedes the ad-hoc green tokens that
+  were inherited from the upstream `dga.css` mirror.
+- **Dark topbar** — header background uses `--dga-green-800` (#003318)
+  so the supplied white-text ADF logo sits on a brand-correct dark
+  surface. All topbar controls (language switch, upload button,
+  health pill, actor select) restyled for the dark surface with
+  AA-grade contrast and visible focus rings.
+- **Period comparison selector** on Overview — a segmented control
+  next to the period-comparison card lets the admin switch between
+  **Weekly** (7d), **Monthly** (30d), and **Quarterly** (90d). The
+  card title updates to reflect the chosen period, and the choice is
+  persisted to `localStorage` (`adf.pop.period`).
+- **Export period filter** — every Excel export button is now a split
+  button: clicking the main label exports the dashboard's current
+  view; clicking the chevron opens a menu with explicit period
+  presets (current view, last 7/30/90 days, this month, last month,
+  all data). The export endpoint receives explicit `from`/`to`
+  parameters when a preset is chosen, overriding the dashboard's
+  current date filter without disturbing the dashboard view.
+- 18 new i18n keys (9 AR + 9 EN) for the period selector, export menu
+  headings, and chevron aria-label.
+
+### Changed
+- **Typography → IBM Plex Sans family** — Arabic now renders in
+  *IBM Plex Sans Arabic* (weights 300–700) and Latin in *IBM Plex Sans*
+  (400–700). Replaces the previous Noto Naskh / Noto Sans Arabic
+  pair. Tabular numerics retained via `font-variant-numeric:
+  tabular-nums`.
+- FastAPI app version bumped to `1.4.0`.
+
+### Notes
+- A subsequent v1.4.x will adopt DGA-supplied component primitives
+  and icons from a Figma source-of-truth (pending file from project
+  lead). The token-level alignment shipped here is a pre-requisite
+  for that work.
+
 ## [1.3.1] — 2026-05-04 (hotfix)
 
 ### Fixed
